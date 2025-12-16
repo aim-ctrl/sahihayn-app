@@ -2,16 +2,16 @@ import streamlit as st
 import pandas as pd
 import requests
 import html
-import re # <--- NYTT: Behövs för att leta efter mönster i texten
+import re
 
-# --- KONFIGURATION ---
+# --- CONFIGURATION ---
 st.set_page_config(
-    page_title="Hadith Design Test", 
-    page_icon="🎨", 
+    page_title="Hadith Reader", 
+    page_icon="☪️", 
     layout="centered"
 )
 
-# --- CSS / DESIGN ---
+# --- CSS / STYLING ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
@@ -19,96 +19,79 @@ st.markdown("""
     .hadith-card {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
-        border-radius: 16px;
-        padding: 24px;
+        border-radius: 12px;
+        padding: 20px;
         margin-bottom: 24px;
-        border-left: 6px solid #2E8B57;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border-right: 6px solid #2E8B57; /* Ändrade till höger kant för RTL-känsla */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         display: flex;
         flex-direction: column;
-        overflow: hidden;
     }
     
     .arabic-text {
         font-family: 'Scheherazade New', serif;
-        font-size: 34px;
-        line-height: 2.2;
+        font-size: 36px;
+        line-height: 2.3;
         direction: rtl;
         text-align: right;
-        color: #1f1f1f;
+        color: #000;
         margin-top: 15px;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 1px dashed #eee;
-    }
-    
-    .english-text {
-        font-family: 'Source Sans Pro', sans-serif;
-        font-size: 18px;
-        line-height: 1.6;
-        color: #333;
-        margin-bottom: 12px;
-        direction: ltr;
-        text-align: left;
+        width: 100%;
     }
 
-    /* Header container inside card */
+    /* Header container */
     .card-header {
         display: flex; 
         justify-content: space-between; 
-        align-items: flex-start;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-
-    .tags-container {
-        display: flex;
+        align-items: center;
         flex-wrap: wrap;
         gap: 8px;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        direction: ltr; /* Behåll header LTR så tagsen ligger snyggt */
     }
 
-    /* Grön tag (Bok, Nummer, Narrator) */
+    .tags-left {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
     .meta-tag {
-        display: inline-flex;
-        align-items: center;
         background-color: #f1f8e9;
         color: #2e7d32;
-        padding: 4px 12px;
-        border-radius: 20px;
+        padding: 4px 10px;
+        border-radius: 6px;
         font-size: 0.8rem;
-        font-weight: 700;
+        font-weight: 600;
         border: 1px solid #dcedc8;
-        letter-spacing: 0.3px;
     }
 
-    /* Orange tag (Grade) */
     .grade-tag {
-        display: inline-block;
         background-color: #fff3e0; 
         color: #e65100; 
         border: 1px solid #ffe0b2;
-        padding: 4px 12px;
-        border-radius: 20px;
+        padding: 4px 10px;
+        border-radius: 6px;
         font-size: 0.8rem;
-        font-weight: 700;
+        font-weight: 600;
     }
 
     @media (prefers-color-scheme: dark) {
-        .hadith-card { background-color: #262730; border-color: #444; }
-        .arabic-text { color: #f0f0f0; border-bottom-color: #444; }
-        .english-text { color: #d0d0d0; }
+        .hadith-card { background-color: #1e1e1e; border-color: #333; }
+        .arabic-text { color: #ffffff; }
         .meta-tag { background-color: #1b3320; color: #a5d6a7; border-color: #2e5c35; }
+        .card-header { border-bottom-color: #333; }
         .grade-tag { background-color: #3e2723; color: #ffcc80; border-color: #4e342e; }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- DATAFUNKTIONER ---
+# --- DATA LOADING ---
 
 @st.cache_data(show_spinner=True)
 def load_data():
-    # Samma laddningsfunktion som förut
     def fetch_book_pair(book_name):
         url_eng = f"https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-{book_name}.json"
         url_ara = f"https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-{book_name}.json"
@@ -134,84 +117,53 @@ try:
 except:
     df = pd.DataFrame()
 
-# --- EXTRAHERA NARRATOR FUNKTION ---
-def extract_narrator_info(text):
-    """
-    Letar efter 'Narrated X' eller 'X reported'.
-    Returnerar: (Namnet på personen, städad text utan namnet)
-    """
-    narrator = None
-    clean_text = text
+# --- HELPER FUNCTIONS ---
 
-    # Fall 1: "Narrated Abu Huraira:"
-    # Regex förklaring: ^Narrated = Börjar med Narrated. \s+ = mellanslag. (.+?) = Fånga namnet. [:\.] = slutar på : eller .
+def extract_narrator_name(text):
+    """Endast för att hitta namnet till taggen, texten visas inte."""
     match_narrated = re.search(r'^Narrated\s+(.+?)(?::|\.)', text)
-    
-    # Fall 2: "Abu Huraira reported:"
     match_reported = re.search(r'^(.+?)\s+reported[:\s]', text)
-
+    
     if match_narrated:
-        narrator = match_narrated.group(1)
-        # Ta bort "Narrated X:" från texten för att undvika upprepning
-        clean_text = re.sub(r'^Narrated\s+.+?[:\.]\s*', '', text)
-        
+        return match_narrated.group(1)
     elif match_reported:
-        narrator = match_reported.group(1)
-        # Ta bort "X reported:" från texten
-        clean_text = re.sub(r'^.+?\s+reported[:\s]*', '', text)
-
-    return narrator, clean_text
+        return match_reported.group(1)
+    return None
 
 # --- UI LAYOUT ---
 
-st.title("🎨 Design Mode")
-st.info("Nu testar vi att extrahera 'Narrator' till en egen tag.")
+st.title("📖 Hadith Reader")
 
 if not df.empty:
+    # Hämta 10 slumpmässiga
     sample_df = df.sample(10)
 
     for i, row in sample_df.iterrows():
         
-        # 1. LOGIK: Hitta narrator och städa texten
-        raw_english = str(row['text'])
-        narrator_name, cleaned_english_text = extract_narrator_info(raw_english)
-        
-        # HTML Escape på texten (men använd den städade versionen)
+        # 1. Hämta data
         arabic_safe = html.escape(str(row['arabic_text'])).replace('\n', ' ')
-        english_safe = html.escape(cleaned_english_text).replace('\n', '<br>')
         
-        # Bygg Narrator Badge (Om vi hittade ett namn)
+        # Vi använder engelska texten BARA för att hitta namnet på berättaren
+        narrator_name = extract_narrator_name(str(row['text']))
+        
+        # Skapa Badge HTML
         narrator_badge = ""
         if narrator_name:
-            # Om namnet är väldigt långt (över 25 tecken), korta ner det lite med "..."
-            if len(narrator_name) > 25:
-                narrator_name = narrator_name[:25] + "..."
+            if len(narrator_name) > 20: narrator_name = narrator_name[:20] + "..."
             narrator_badge = f"<span class='meta-tag'>👤 {narrator_name}</span>"
 
-        # Bygg Grade Badge
         grade_badge = ""
         if isinstance(row['grades'], list) and len(row['grades']) > 0:
             try:
                 g = row['grades'][0]['grade']
                 grade_badge = f"<span class='grade-tag'>{g}</span>"
-            except:
-                pass
+            except: pass
 
-        # 2. BYGG HTML
-        card_html = f"""
-<div class="hadith-card">
-    <div class="card-header">
-        <div class="tags-container">
-            <span class="meta-tag">📖 {row['source_book']}</span>
-            <span class="meta-tag"># {row['hadithnumber']}</span>
-            {narrator_badge}
-        </div>
-        {grade_badge}
-    </div>
-    <div class="arabic-text">{arabic_safe}</div>
-    <div class="english-text">{english_safe}</div>
-</div>
-"""
+        # 2. BYGG HTML - Extremt kompakt för att undvika formatteringsfel
+        # OBS: Inga onödiga mellanslag eller indrag i f-stringen
+        card_html = f"""<div class="hadith-card"><div class="card-header"><div class="tags-left"><span class="meta-tag">📖 {row['source_book']}</span><span class="meta-tag"># {row['hadithnumber']}</span>{narrator_badge}</div>{grade_badge}</div><div class="arabic-text">{arabic_safe}</div></div>"""
+
         st.markdown(card_html, unsafe_allow_html=True)
+
 else:
-    st.error("Ingen data.")
+    st.error("Kunde inte ladda data.")
