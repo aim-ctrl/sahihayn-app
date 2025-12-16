@@ -7,11 +7,11 @@ import html
 st.set_page_config(page_title="Hadith Viewer", page_icon="☪️", layout="centered")
 
 # --- CSS / DESIGN ---
+# Huvudfelet var nästlade <style>-taggar. Här är den rensade versionen:
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
 
-    <style>
     /* Tvinga behållaren för kolumner att inte bryta raden (wrap) */
     [data-testid="stHorizontalBlock"] {
         flex-wrap: nowrap !important;
@@ -27,7 +27,6 @@ st.markdown("""
     div[data-testid="stNumberInput"] > div {
         width: 100%;
     }
-    </style>
     
     /* Centrera texten i nummer-inputen */
     div[data-testid="stNumberInput"] input {
@@ -100,25 +99,27 @@ def get_dataset():
     df_muslim = load_book("muslim")
     full_df = pd.concat([df_bukhari, df_muslim], ignore_index=True)
     
-    # Städa numren
+    # Städa numren (ta bort .0 om det finns)
     full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
     
     return full_df
 
-with st.spinner("Loading library..."):
+with st.spinner("Laddar bibliotek..."):
     df = get_dataset()
     
-c1,c2 = st.columns([3,2])
+# --- ANVÄNDARGRÄNSSNITT ---
+
+c1, c2 = st.columns([3, 2])
 with c1:
     selected_book = st.radio(
-        "Select book",
+        "Välj bok",
         ["Bukhari", "Muslim"], 
         horizontal=True,
         label_visibility="collapsed"
     )
 with c2:
     hadith_id = st.number_input(
-        "Hadith Number", 
+        "Hadith Nummer", 
         min_value=1, 
         value=1, 
         step=1,
@@ -136,9 +137,18 @@ result = df[
 
 if not result.empty:
     row = result.iloc[0]
+    # Säkra texten för HTML-rendering
     arabic_text = html.escape(str(row['text'])).replace('\n', ' ')
     
-    card_html = f"""<div class="hadith-card"><div class="card-header"><span class="meta-tag">📖 {row['book_name']}</span><span class="meta-tag"># {row['hadithnumber']}</span></div><div class="arabic-text">{arabic_text}</div></div>"""
+    card_html = f"""
+    <div class="hadith-card">
+        <div class="card-header">
+            <span class="meta-tag">📖 {row['book_name']}</span>
+            <span class="meta-tag"># {row['hadithnumber']}</span>
+        </div>
+        <div class="arabic-text">{arabic_text}</div>
+    </div>
+    """
     st.markdown(card_html, unsafe_allow_html=True)
     
 else:
