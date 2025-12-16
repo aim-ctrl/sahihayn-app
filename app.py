@@ -94,6 +94,7 @@ with st.spinner("Laddar biblioteket..."):
 
 # 1. Välj bok
 selected_book = st.radio(
+    "",
     ["Bukhari", "Muslim"], 
     horizontal=True
 )
