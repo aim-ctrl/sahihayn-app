@@ -90,19 +90,14 @@ def get_dataset():
 with st.spinner("Laddar biblioteket..."):
     df = get_dataset()
 
-# --- UI ---
-
-# 1. Välj bok
 selected_book = st.radio(
     "",
     ["Bukhari", "Muslim"], 
     horizontal=True
 )
 
-st.write("") 
-
 hadith_id = st.number_input(
-    "Hadith Nummer", 
+    "Hadith Number", 
     min_value=1, 
     value=1, 
     step=1,
