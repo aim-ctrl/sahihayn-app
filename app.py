@@ -12,10 +12,7 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
 
-    /* Tvinga behållaren för kolumner att inte bryta raden (wrap) */
-    [data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important;
-    }
+
     
     /* Justera minsta bredden på kolumnerna så de får krympa */
     [data-testid="column"] {
