@@ -11,19 +11,6 @@ st.set_page_config(page_title="Hadith Viewer", page_icon="☪️", layout="cente
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
-
-
-    
-    /* Justera minsta bredden på kolumnerna så de får krympa */
-    [data-testid="column"] {
-        min-width: 0px !important;
-        flex: 1 1 auto !important;
-    }
-
-    /* (Valfritt) Minska padding runt input-fältet för att spara plats på små skärmar */
-    div[data-testid="stNumberInput"] > div {
-        width: 120px;
-    }
     
     /* Centrera texten i nummer-inputen */
     div[data-testid="stNumberInput"] input {
@@ -106,22 +93,20 @@ with st.spinner("Laddar bibliotek..."):
     
 # --- ANVÄNDARGRÄNSSNITT ---
 
-c1, c2 = st.columns([1, 1])
-with c1:
-    selected_book = st.radio(
-        "Välj bok",
-        ["Bukhari", "Muslim"], 
-        horizontal=False,
-        label_visibility="collapsed"
-    )
-with c2:
-    hadith_id = st.number_input(
-        "Hadith Nummer", 
-        min_value=1, 
-        value=1, 
-        step=1,
-        format="%d" 
-    )
+selected_book = st.radio(
+    "Välj bok",
+    ["Bukhari", "Muslim"], 
+    horizontal=True,
+    label_visibility="collapsed"
+)
+
+hadith_id = st.number_input(
+    "Hadith Nummer", 
+    min_value=1, 
+    value=1, 
+    step=1,
+    format="%d" 
+)
 
 # --- VISA KORTET ---
 
