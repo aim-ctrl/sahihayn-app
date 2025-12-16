@@ -25,7 +25,7 @@ st.markdown("""
 
     /* (Valfritt) Minska padding runt input-fältet för att spara plats på små skärmar */
     div[data-testid="stNumberInput"] > div {
-        width: 100%;
+        width: 120px;
     }
     
     /* Centrera texten i nummer-inputen */
