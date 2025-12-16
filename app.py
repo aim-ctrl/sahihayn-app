@@ -87,22 +87,23 @@ def get_dataset():
     
     return full_df
 
-with st.spinner("Laddar biblioteket..."):
+with st.spinner("Loading library..."):
     df = get_dataset()
-
-selected_book = st.radio(
-    "",
-    ["Bukhari", "Muslim"], 
-    horizontal=True
-)
-
-hadith_id = st.number_input(
-    "Hadith Number", 
-    min_value=1, 
-    value=1, 
-    step=1,
-    format="%d" 
-)
+c1,c2 = st.columns([3 2])
+with c1:
+    selected_book = st.radio(
+        "",
+        ["Bukhari", "Muslim"], 
+        horizontal=True
+    )
+with c2:
+    hadith_id = st.number_input(
+        "Hadith Number", 
+        min_value=1, 
+        value=1, 
+        step=1,
+        format="%d" 
+    )
 
 # --- VISA KORTET ---
 
