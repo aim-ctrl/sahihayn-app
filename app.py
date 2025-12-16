@@ -14,7 +14,7 @@ st.markdown("""
     /* Centrera texten i nummer-inputen */
     div[data-testid="stNumberInput"] input {
         text-align: center;
-        font-size: 22px;
+        font-size: 18px;
         font-weight: bold;
         color: #2E8B57;
     }
