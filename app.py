@@ -105,7 +105,8 @@ hadith_id = st.number_input(
     min_value=1, 
     value=1, 
     step=1,
-    format="%d" 
+    format="%d" ,
+    label_visibility="collapsed"
 )
 
 # --- VISA KORTET ---
