@@ -13,6 +13,9 @@ st.set_page_config(
 # --- CSS / STYLING ---
 st.markdown("""
 <style>
+    /* 1. IMPORTERA FONTEN FRÅN GOOGLE */
+    @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
+
     /* Card Design */
     .hadith-card {
         background-color: var(--background-color);
@@ -23,22 +26,29 @@ st.markdown("""
         border-left: 6px solid #2E8B57; /* SeaGreen */
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         transition: transform 0.2s;
+        /* Fix för layout-problem */
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
+    
     .hadith-card:hover {
         box-shadow: 0 6px 12px rgba(0,0,0,0.1);
     }
     
-    /* Arabic Text Styling */
+    /* Arabic Text Styling - UPDATED */
     .arabic-text {
-        font-family: 'Amiri', 'Traditional Arabic', serif;
-        font-size: 26px;
-        line-height: 2.0;
+        font-family: 'Scheherazade New', serif; /* Här är din nya font */
+        font-size: 32px; /* Ökad storlek för läsbarhet */
+        line-height: 2.0; /* Luftigare rader */
         direction: rtl;
         text-align: right;
         color: #1f1f1f;
         margin-bottom: 20px;
         padding-bottom: 15px;
         border-bottom: 1px dashed #eee;
+        width: 100%;
+        display: block;
     }
     
     /* English Text Styling */
@@ -48,6 +58,8 @@ st.markdown("""
         line-height: 1.6;
         color: #444;
         margin-bottom: 12px;
+        direction: ltr;
+        text-align: left;
     }
 
     /* Meta Data Tags */
@@ -60,6 +72,7 @@ st.markdown("""
         font-size: 0.85rem;
         font-weight: 600;
         margin-right: 8px;
+        margin-bottom: 8px; /* Om de radbryts */
         border: 1px solid #dcedc8;
     }
 
