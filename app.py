@@ -3,130 +3,141 @@ import pandas as pd
 import requests
 from thefuzz import process
 
-# --- KONFIGURATION ---
-st.set_page_config(page_title="Hadith Search", page_icon="☪️", layout="centered")
+# --- CONFIGURATION ---
+st.set_page_config(
+    page_title="Hadith Search Engine", 
+    page_icon="☪️", 
+    layout="centered"
+)
 
-# --- CSS / DESIGN ---
+# --- CSS / STYLING ---
 st.markdown("""
 <style>
-    /* Kort-design */
+    /* Card Design */
     .hadith-card {
         background-color: var(--background-color);
         border: 1px solid #ddd;
         border-radius: 12px;
-        padding: 20px;
+        padding: 24px;
         margin-bottom: 24px;
         border-left: 6px solid #2E8B57; /* SeaGreen */
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        transition: transform 0.2s;
+    }
+    .hadith-card:hover {
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
     }
     
-    /* Arabisk textdesign */
+    /* Arabic Text Styling */
     .arabic-text {
         font-family: 'Amiri', 'Traditional Arabic', serif;
-        font-size: 24px;
-        line-height: 1.8;
+        font-size: 26px;
+        line-height: 2.0;
         direction: rtl;
         text-align: right;
         color: #1f1f1f;
-        margin-bottom: 15px;
-        padding-bottom: 10px;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
         border-bottom: 1px dashed #eee;
     }
     
-    /* Engelsk textdesign */
+    /* English Text Styling */
     .english-text {
         font-family: 'Source Sans Pro', sans-serif;
-        font-size: 16px;
-        line-height: 1.5;
+        font-size: 17px;
+        line-height: 1.6;
         color: #444;
         margin-bottom: 12px;
     }
 
-    /* Metadata (Källa, nummer) */
+    /* Meta Data Tags */
     .meta-tag {
         display: inline-block;
-        background-color: #e8f5e9;
-        color: #2e7d32;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 0.8rem;
+        background-color: #f1f8e9;
+        color: #33691e;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
         font-weight: 600;
-        margin-right: 5px;
+        margin-right: 8px;
+        border: 1px solid #dcedc8;
     }
 
-    /* Dark mode anpassning */
+    /* Dark Mode Support */
     @media (prefers-color-scheme: dark) {
         .hadith-card { background-color: #262730; border-color: #444; }
         .arabic-text { color: #e0e0e0; border-bottom-color: #444; }
         .english-text { color: #c0c0c0; }
-        .meta-tag { background-color: #1e3a29; color: #81c784; }
+        .meta-tag { background-color: #1b3320; color: #a5d6a7; border-color: #2e5c35; }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- DATAFUNKTIONER ---
+# --- DATA FETCHING ---
 
 @st.cache_data(show_spinner=True)
-def load_and_merge_data():
-    """Hämtar Bukhari och Muslim (Eng + Ara) och slår ihop dem."""
+def load_data():
+    """
+    Fetches English and Arabic editions of Bukhari and Muslim from API.
+    Merges them based on hadith number.
+    """
     
-    def fetch_book(book_name):
-        # URL:er till API
+    def fetch_book_pair(book_name):
+        # API Endpoints
         url_eng = f"https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-{book_name}.json"
         url_ara = f"https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-{book_name}.json"
         
         try:
-            # Hämta båda språken
+            # Fetch both languages
             resp_eng = requests.get(url_eng).json()
             resp_ara = requests.get(url_ara).json()
             
-            # Skapa DataFrames
+            # Create DataFrames
             df_eng = pd.DataFrame(resp_eng['hadiths'])
             df_ara = pd.DataFrame(resp_ara['hadiths'])
             
-            # Förbered arabiska för sammanslagning (använd hadithnumber som nyckel)
-            # Vi gör en dictionary för snabb uppslagning: {hadithnumber: text}
+            # Map Arabic text to English DataFrame using 'hadithnumber' as key
             ara_map = dict(zip(df_ara['hadithnumber'], df_ara['text']))
             
-            # Lägg till arabisk text i den engelska dataframen
             df_eng['arabic_text'] = df_eng['hadithnumber'].map(ara_map)
             df_eng['source_book'] = book_name.capitalize()
             
-            # Rensa bort rader som saknar text
+            # Clean data (remove rows missing text in either language)
             df_eng = df_eng.dropna(subset=['text', 'arabic_text'])
             
+            # Return specific columns
             return df_eng[['source_book', 'hadithnumber', 'text', 'arabic_text', 'grades']]
             
         except Exception as e:
-            st.error(f"Kunde inte ladda {book_name}: {e}")
+            st.error(f"Error fetching {book_name}: {e}")
             return pd.DataFrame()
 
-    # Hämta data
-    df_bukhari = fetch_book("bukhari")
-    df_muslim = fetch_book("muslim")
+    # Fetch both books
+    df_bukhari = fetch_book_pair("bukhari")
+    df_muslim = fetch_book_pair("muslim")
     
-    # Slå ihop allt
-    full_df = pd.concat([df_bukhari, df_muslim], ignore_index=True)
-    return full_df
+    # Combine into one dataset
+    return pd.concat([df_bukhari, df_muslim], ignore_index=True)
 
-# Ladda datan (Detta sker bara en gång per session)
+# Initialize Data
 try:
-    with st.spinner('Hämtar hadither från databasen...'):
-        df = load_and_merge_data()
+    with st.spinner('Downloading Hadith database... please wait...'):
+        df = load_data()
 except Exception as e:
-    st.error("Ett fel uppstod vid laddning av data. Kontrollera din internetanslutning.")
+    st.error("Failed to load data. Please check your internet connection.")
     df = pd.DataFrame()
 
-# --- SÖKLOGIK ---
+# --- SEARCH LOGIC ---
 
-def search_engine(query, data, search_mode):
+def search_engine(query, data, method):
     if not query:
-        return data.sample(10) # Visa 10 slumpmässiga om ingen sökning görs
+        # Return a random sample if no query is present
+        return data.sample(10)
     
-    query = query.lower()
+    query = query.lower().strip()
     
-    if search_mode == "Exakt matchning":
-        # Snabb sökning
+    if method == "Exact Match":
+        # Search in English text, Arabic text, or Hadith Number
         mask = (
             data['text'].str.lower().str.contains(query, na=False) |
             data['arabic_text'].str.contains(query, na=False) |
@@ -134,68 +145,86 @@ def search_engine(query, data, search_mode):
         )
         return data[mask]
     
-    elif search_mode == "Fuzzy (Smart sök)":
-        # Lite långsammare men hittar "nästan" rätt ord
-        # Vi söker endast i engelska texten för prestanda i detta läge
+    elif method == "Fuzzy Search (Smart)":
+        # Uses Levenshtein distance to find approximate matches (mainly for English)
         titles = data['text'].tolist()
+        # Get top 20 matches
         matches = process.extract(query, titles, limit=20)
-        # Vi accepterar träffar med över 60% likhet
+        # Filter for quality matches (>60 score)
         match_texts = [m[0] for m in matches if m[1] >= 60]
         return data[data['text'].isin(match_texts)]
 
 # --- UI LAYOUT ---
 
-st.title("📖 Hadith Explorer")
-st.caption("Sök i Sahih Bukhari & Sahih Muslim (Engelska & Arabiska)")
+st.title("📚 Hadith Search")
+st.markdown("Search across **Sahih Bukhari** & **Sahih Muslim**.")
 
-# Sidebar filter
+# Sidebar Settings
 with st.sidebar:
-    st.header("Inställningar")
+    st.header("Settings")
+    
+    # Book Filter
     selected_books = st.multiselect(
-        "Välj böcker", 
+        "Select Books", 
         options=["Bukhari", "Muslim"], 
         default=["Bukhari", "Muslim"]
     )
-    search_mode = st.radio("Sökmetod", ["Exakt matchning", "Fuzzy (Smart sök)"])
-    st.info("💡 **Fuzzy sök** hittar resultat även om du stavar lite fel, men är långsammare.")
+    
+    # Search Mode
+    search_mode = st.radio(
+        "Search Method", 
+        ["Exact Match", "Fuzzy Search (Smart)"]
+    )
+    
+    st.info("""
+    **Exact Match:** Finds the exact word or phrase (supports Arabic & English).
+    
+    **Fuzzy Search:** Finds similar words even with spelling mistakes (best for English).
+    """)
 
-# Filtrera på bok först
+# Filter Data by Book
 filtered_df = df[df['source_book'].isin(selected_books)]
 
-# Sökfält
-search_query = st.text_input("", placeholder="Sök på ord (t.ex. 'Prayer', 'Intention') eller hadith-nummer...")
+# Search Input
+query = st.text_input(
+    "Search", 
+    placeholder="Type a topic (e.g., 'Fasting'), Arabic word (e.g., 'صلاة'), or number..."
+)
 
-# Utför sökning
-results = search_engine(search_query, filtered_df, search_mode)
+# Execute Search
+results = search_engine(query, filtered_df, search_mode)
 
-# Visa resultat
-st.markdown(f"**Visar {len(results)} hadither**")
+# Results Header
+st.markdown(f"**Found {len(results)} Hadiths**")
 
-# Loopa igenom och rendera kort
-# Vi sätter en gräns på 50 kort för att inte krascha webbläsaren om man söker på "the"
-for i, row in results.head(50).iterrows():
+# Display Results (Limit to 50 to prevent lag)
+display_limit = 50
+
+for i, row in results.head(display_limit).iterrows():
     
-    # Hantera Grade (om det finns)
-    grade_display = ""
+    # Format Grade (if available)
+    grade_badge = ""
     if isinstance(row['grades'], list) and len(row['grades']) > 0:
-        # Ta första graden som exempel
-        grade_display = f"<span class='meta-tag' style='background-color:#fff3e0; color:#e65100;'>{row['grades'][0]['grade']}</span>"
+        # Taking the first grade element
+        g = row['grades'][0]['grade']
+        grade_badge = f"<span class='meta-tag' style='background-color:#fff3e0; color:#e65100; border-color:#ffe0b2;'>{g}</span>"
 
+    # Render Card
     st.markdown(f"""
     <div class="hadith-card">
-        <div style="margin-bottom:10px;">
-            <span class="meta-tag">{row['source_book']}</span>
-            <span class="meta-tag">#{row['hadithnumber']}</span>
-            {grade_display}
+        <div style="margin-bottom:15px;">
+            <span class="meta-tag">📖 {row['source_book']}</span>
+            <span class="meta-tag"># {row['hadithnumber']}</span>
+            {grade_badge}
         </div>
         <div class="arabic-text">{row['arabic_text']}</div>
         <div class="english-text">{row['text']}</div>
     </div>
     """, unsafe_allow_html=True)
 
-if len(results) > 50:
-    st.warning("Visar de första 50 resultaten. Förfina din sökning för att se mer.")
+if len(results) > display_limit:
+    st.warning(f"Showing the first {display_limit} results. Please refine your search to see more.")
 
 # Footer
 st.markdown("---")
-st.caption("Data provided by fawazahmed0 API.")
+st.caption("Data source: fawazahmed0 Hadith API | Built with Streamlit")
