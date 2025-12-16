@@ -7,11 +7,16 @@ import html
 st.set_page_config(page_title="Hadith Viewer", page_icon="☪️", layout="centered")
 
 # --- CSS / DESIGN ---
-# Huvudfelet var nästlade <style>-taggar. Här är den rensade versionen:
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
+    /* NYTT: Minskar tomrummet högst upp på sidan */
+    .block-container {
+        padding-top: 1rem !important; /* Standard är ofta runt 6rem */
+        padding-bottom: 1rem !important;
+    }
+
     /* Centrera texten i nummer-inputen */
     div[data-testid="stNumberInput"] input {
         text-align: center;
@@ -92,6 +97,9 @@ with st.spinner("Laddar bibliotek..."):
     df = get_dataset()
     
 # --- ANVÄNDARGRÄNSSNITT ---
+
+# Här kan du använda kolumner igen om du vill ha dem bredvid varandra, 
+# men just nu ligger de staplade enligt din senaste kod.
 
 selected_book = st.radio(
     "Välj bok",
