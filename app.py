@@ -89,7 +89,8 @@ def get_dataset():
 
 with st.spinner("Loading library..."):
     df = get_dataset()
-c1,c2 = st.columns([3 2])
+    
+c1,c2 = st.columns([3,2])
 with c1:
     selected_book = st.radio(
         "",
