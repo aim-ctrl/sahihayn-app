@@ -147,5 +147,6 @@ if not result.empty:
     """
     st.markdown(card_html, unsafe_allow_html=True)
     st.write("")
+    st.write("")
 else:
     st.info(f"Nummer **{current_num_str}** finns inte i **{selected_book}**. (Vissa nummer kan saknas eller ha suffix som 'a').")
