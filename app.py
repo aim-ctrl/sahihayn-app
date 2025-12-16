@@ -11,7 +11,12 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
-    /* NYTT: Minskar tomrummet högst upp på sidan */
+    header {
+        visibility: hidden;
+    }
+    
+    footer { visibility: hidden; } */
+    
     .block-container {
         padding-top: 1rem !important; /* Standard är ofta runt 6rem */
         padding-bottom: 1rem !important;
