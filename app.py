@@ -6,37 +6,20 @@ import html
 # --- KONFIGURATION ---
 st.set_page_config(page_title="Hadith Viewer", page_icon="☪️", layout="centered")
 
-# --- INITIALISERA STATE (Minnet) ---
-# Vi måste starta räknaren på 1 om den inte redan finns
-if 'hadith_number' not in st.session_state:
-    st.session_state.hadith_number = 1
-
-# --- CALLBACKS (Knapp-funktioner) ---
-def next_hadith():
-    st.session_state.hadith_number += 1
-
-def prev_hadith():
-    if st.session_state.hadith_number > 1:
-        st.session_state.hadith_number -= 1
-
 # --- CSS / DESIGN ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
-    /* Justera inmatningsfältet så det ser ut som en räknare */
+    /* Centrera texten i nummer-inputen */
     div[data-testid="stNumberInput"] input {
         text-align: center;
-        font-size: 20px;
+        font-size: 22px;
         font-weight: bold;
+        color: #2E8B57;
     }
 
-    /* Gör knapparna lite bredare */
-    div[data-testid="stButton"] button {
-        width: 100%;
-        font-size: 20px;
-    }
-
+    /* Kortet */
     .hadith-card {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
@@ -78,13 +61,6 @@ st.markdown("""
         font-weight: 700;
         border: 1px solid #dcedc8;
     }
-    
-    /* Dölj Streamlits inbyggda små pilar i nummer-fältet för en renare look */
-    input[type=number]::-webkit-inner-spin-button, 
-    input[type=number]::-webkit-outer-spin-button { 
-        -webkit-appearance: none; 
-        margin: 0; 
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -106,7 +82,7 @@ def get_dataset():
     df_muslim = load_book("muslim")
     full_df = pd.concat([df_bukhari, df_muslim], ignore_index=True)
     
-    # Städa numren (ta bort .0 och gör till text)
+    # Städa numren
     full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
     
     return full_df
@@ -118,40 +94,26 @@ with st.spinner("Laddar biblioteket..."):
 
 st.title("📖 Hadith Viewer")
 
-# 1. Välj bok (Radio Buttons)
+# 1. Välj bok
 selected_book = st.radio(
-    "Välj Bok", 
     ["Bukhari", "Muslim"], 
     horizontal=True
 )
 
-st.write("") # Lite luft
+st.write("") 
 
-# 2. Navigering (Minus | Input | Plus)
-col_minus, col_input, col_plus = st.columns([1, 2, 1])
-
-with col_minus:
-    st.button("➖", on_click=prev_hadith)
-
-with col_input:
-    # Koppla input direkt till st.session_state.hadith_number
-    st.number_input(
-        "Nummer", 
-        min_value=1, 
-        step=1, 
-        key="hadith_number", # Detta kopplar inputen till minnet
-        label_visibility="collapsed" # Döljer etiketten "Nummer" för snyggare design
-    )
-
-with col_plus:
-    st.button("➕", on_click=next_hadith)
+hadith_id = st.number_input(
+    "Hadith Nummer", 
+    min_value=1, 
+    value=1, 
+    step=1,
+    format="%d" 
+)
 
 # --- VISA KORTET ---
 
-# Hämta nuvarande nummer från minnet
-current_num_str = str(st.session_state.hadith_number)
+current_num_str = str(hadith_id)
 
-# Sök i datan
 result = df[
     (df['book_name'] == selected_book) & 
     (df['hadithnumber'] == current_num_str)
@@ -165,4 +127,4 @@ if not result.empty:
     st.markdown(card_html, unsafe_allow_html=True)
     
 else:
-    st.info(f"Nummer **{current_num_str}** finns inte i **{selected_book}** (eller så har den ett annat format, t.ex. '1a').")
+    st.info(f"Nummer **{current_num_str}** finns inte i **{selected_book}**. (Vissa nummer kan saknas eller ha suffix som 'a').")
