@@ -4,13 +4,39 @@ import requests
 import html
 
 # --- KONFIGURATION ---
-st.set_page_config(page_title="Hadith Lookup", page_icon="☪️", layout="centered")
+st.set_page_config(page_title="Hadith Viewer", page_icon="☪️", layout="centered")
+
+# --- INITIALISERA STATE (Minnet) ---
+# Vi måste starta räknaren på 1 om den inte redan finns
+if 'hadith_number' not in st.session_state:
+    st.session_state.hadith_number = 1
+
+# --- CALLBACKS (Knapp-funktioner) ---
+def next_hadith():
+    st.session_state.hadith_number += 1
+
+def prev_hadith():
+    if st.session_state.hadith_number > 1:
+        st.session_state.hadith_number -= 1
 
 # --- CSS / DESIGN ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
+    /* Justera inmatningsfältet så det ser ut som en räknare */
+    div[data-testid="stNumberInput"] input {
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    /* Gör knapparna lite bredare */
+    div[data-testid="stButton"] button {
+        width: 100%;
+        font-size: 20px;
+    }
+
     .hadith-card {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
@@ -52,6 +78,13 @@ st.markdown("""
         font-weight: 700;
         border: 1px solid #dcedc8;
     }
+    
+    /* Dölj Streamlits inbyggda små pilar i nummer-fältet för en renare look */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,14 +104,10 @@ def get_dataset():
 
     df_bukhari = load_book("bukhari")
     df_muslim = load_book("muslim")
-    
     full_df = pd.concat([df_bukhari, df_muslim], ignore_index=True)
     
-    # --- NYTT: STÄDA NUMREN ---
-    # 1. Gör om allt till text (strängar)
-    full_df['hadithnumber'] = full_df['hadithnumber'].astype(str)
-    # 2. Ta bort ".0" om det finns (t.ex. "1.0" blir "1")
-    full_df['hadithnumber'] = full_df['hadithnumber'].str.replace('.0', '', regex=False)
+    # Städa numren (ta bort .0 och gör till text)
+    full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
     
     return full_df
 
@@ -89,38 +118,51 @@ with st.spinner("Laddar biblioteket..."):
 
 st.title("📖 Hadith Viewer")
 
-col1, col2 = st.columns([1, 1])
-with col1:
-    selected_book = st.selectbox("Välj Bok", ["Bukhari", "Muslim"])
-with col2:
-    input_number = st.text_input("Hadith Nummer", placeholder="T.ex. 1")
+# 1. Välj bok (Radio Buttons)
+selected_book = st.radio(
+    "Välj Bok", 
+    ["Bukhari", "Muslim"], 
+    horizontal=True
+)
 
-# --- DEBUGGER (Hjälper oss se vad som är fel) ---
-with st.expander("🔍 Se hur datan ser ut (Debug)"):
-    st.write(f"Totalt antal hadither laddade: {len(df)}")
-    # Visa de första 5 raderna för den valda boken så vi ser numreringen
-    st.write(f"Exempel från {selected_book}:")
-    st.dataframe(df[df['book_name'] == selected_book].head(5))
+st.write("") # Lite luft
 
-# --- SÖKNING ---
-if input_number:
-    # Städa inputen också (ta bort mellanslag)
-    clean_input = input_number.strip()
+# 2. Navigering (Minus | Input | Plus)
+col_minus, col_input, col_plus = st.columns([1, 2, 1])
+
+with col_minus:
+    st.button("➖", on_click=prev_hadith)
+
+with col_input:
+    # Koppla input direkt till st.session_state.hadith_number
+    st.number_input(
+        "Nummer", 
+        min_value=1, 
+        step=1, 
+        key="hadith_number", # Detta kopplar inputen till minnet
+        label_visibility="collapsed" # Döljer etiketten "Nummer" för snyggare design
+    )
+
+with col_plus:
+    st.button("➕", on_click=next_hadith)
+
+# --- VISA KORTET ---
+
+# Hämta nuvarande nummer från minnet
+current_num_str = str(st.session_state.hadith_number)
+
+# Sök i datan
+result = df[
+    (df['book_name'] == selected_book) & 
+    (df['hadithnumber'] == current_num_str)
+]
+
+if not result.empty:
+    row = result.iloc[0]
+    arabic_text = html.escape(str(row['text'])).replace('\n', ' ')
     
-    # Filtrera
-    result = df[
-        (df['book_name'] == selected_book) & 
-        (df['hadithnumber'] == clean_input)
-    ]
-
-    if not result.empty:
-        row = result.iloc[0]
-        arabic_text = html.escape(str(row['text'])).replace('\n', ' ')
-        
-        card_html = f"""<div class="hadith-card"><div class="card-header"><span class="meta-tag">📖 {row['book_name']}</span><span class="meta-tag"># {row['hadithnumber']}</span></div><div class="arabic-text">{arabic_text}</div></div>"""
-        st.markdown(card_html, unsafe_allow_html=True)
-        
-    else:
-        st.warning(f"Ingen träff på nummer **{clean_input}** i **{selected_book}**.")
-        # Visa tips om vad som faktiskt finns nära
-        st.info("Kolla i 'Debug'-lådan ovan för att se hur numren ser ut i databasen.")
+    card_html = f"""<div class="hadith-card"><div class="card-header"><span class="meta-tag">📖 {row['book_name']}</span><span class="meta-tag"># {row['hadithnumber']}</span></div><div class="arabic-text">{arabic_text}</div></div>"""
+    st.markdown(card_html, unsafe_allow_html=True)
+    
+else:
+    st.info(f"Nummer **{current_num_str}** finns inte i **{selected_book}** (eller så har den ett annat format, t.ex. '1a').")
