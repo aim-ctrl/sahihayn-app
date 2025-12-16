@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
-import requests
 import html
-import re
 
 # --- CONFIGURATION ---
 st.set_page_config(
@@ -22,7 +20,7 @@ st.markdown("""
         border-radius: 12px;
         padding: 20px;
         margin-bottom: 24px;
-        border-right: 6px solid #2E8B57; /* Ändrade till höger kant för RTL-känsla */
+        border-right: 6px solid #2E8B57;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         display: flex;
         flex-direction: column;
@@ -39,7 +37,6 @@ st.markdown("""
         width: 100%;
     }
 
-    /* Header container */
     .card-header {
         display: flex; 
         justify-content: space-between; 
@@ -49,7 +46,7 @@ st.markdown("""
         border-bottom: 1px solid #f0f0f0;
         padding-bottom: 10px;
         margin-bottom: 10px;
-        direction: ltr; /* Behåll header LTR så tagsen ligger snyggt */
+        direction: ltr; 
     }
 
     .tags-left {
@@ -88,82 +85,61 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- DATA LOADING ---
+# --- DATA LOADING (FRÅN DIN CSV) ---
 
-@st.cache_data(show_spinner=True)
+@st.cache_data
 def load_data():
-    def fetch_book_pair(book_name):
-        url_eng = f"https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-{book_name}.json"
-        url_ara = f"https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-{book_name}.json"
-        try:
-            resp_eng = requests.get(url_eng).json()
-            resp_ara = requests.get(url_ara).json()
-            df_eng = pd.DataFrame(resp_eng['hadiths'])
-            df_ara = pd.DataFrame(resp_ara['hadiths'])
-            ara_map = dict(zip(df_ara['hadithnumber'], df_ara['text']))
-            df_eng['arabic_text'] = df_eng['hadithnumber'].map(ara_map)
-            df_eng['source_book'] = book_name.capitalize()
-            return df_eng.dropna(subset=['text', 'arabic_text'])
-        except:
-            return pd.DataFrame()
+    try:
+        # Läser filen hadith_db.csv som måste finnas i samma mapp/repo
+        df = pd.read_csv("hadith_db.csv")
+        
+        # Säkerställ att text är strängar (om någon cell är tom i Excel)
+        df['narrator'] = df['narrator'].fillna("")
+        df['grade_text'] = df['grade_text'].fillna("")
+        df['arabic_text'] = df['arabic_text'].fillna("")
+        
+        return df
+    except FileNotFoundError:
+        return None
 
-    df_bukhari = fetch_book_pair("bukhari")
-    df_muslim = fetch_book_pair("muslim")
-    return pd.concat([df_bukhari, df_muslim], ignore_index=True)
-
-try:
-    with st.spinner('Laddar data...'):
-        df = load_data()
-except:
-    df = pd.DataFrame()
-
-# --- HELPER FUNCTIONS ---
-
-def extract_narrator_name(text):
-    """Endast för att hitta namnet till taggen, texten visas inte."""
-    match_narrated = re.search(r'^Narrated\s+(.+?)(?::|\.)', text)
-    match_reported = re.search(r'^(.+?)\s+reported[:\s]', text)
-    
-    if match_narrated:
-        return match_narrated.group(1)
-    elif match_reported:
-        return match_reported.group(1)
-    return None
+# Ladda data
+df = load_data()
 
 # --- UI LAYOUT ---
 
 st.title("📖 Hadith Reader")
 
-if not df.empty:
-    # Hämta 10 slumpmässiga
+if df is not None and not df.empty:
+    
+    # Visa 10 slumpmässiga (eller byt till sökning senare)
     sample_df = df.sample(10)
 
     for i, row in sample_df.iterrows():
         
-        # 1. Hämta data
-        arabic_safe = html.escape(str(row['arabic_text'])).replace('\n', ' ')
-        
-        # Vi använder engelska texten BARA för att hitta namnet på berättaren
-        narrator_name = extract_narrator_name(str(row['text']))
-        
-        # Skapa Badge HTML
+        # Hämta data direkt från dina CSV-kolumner
+        arabic_text = html.escape(str(row['arabic_text'])).replace('\n', ' ')
+        book = row['source_book']
+        number = row['hadithnumber']
+        narrator = str(row['narrator']).strip()
+        grade = str(row['grade_text']).strip()
+
+        # Skapa tags
         narrator_badge = ""
-        if narrator_name:
-            if len(narrator_name) > 20: narrator_name = narrator_name[:20] + "..."
-            narrator_badge = f"<span class='meta-tag'>👤 {narrator_name}</span>"
+        if narrator:
+            # Korta ner om namnet är jättelångt
+            if len(narrator) > 25: narrator = narrator[:25] + "..."
+            narrator_badge = f"<span class='meta-tag'>👤 {narrator}</span>"
 
         grade_badge = ""
-        if isinstance(row['grades'], list) and len(row['grades']) > 0:
-            try:
-                g = row['grades'][0]['grade']
-                grade_badge = f"<span class='grade-tag'>{g}</span>"
-            except: pass
+        if grade:
+             grade_badge = f"<span class='grade-tag'>{grade}</span>"
 
-        # 2. BYGG HTML - Extremt kompakt för att undvika formatteringsfel
-        # OBS: Inga onödiga mellanslag eller indrag i f-stringen
-        card_html = f"""<div class="hadith-card"><div class="card-header"><div class="tags-left"><span class="meta-tag">📖 {row['source_book']}</span><span class="meta-tag"># {row['hadithnumber']}</span>{narrator_badge}</div>{grade_badge}</div><div class="arabic-text">{arabic_safe}</div></div>"""
+        # Bygg kortet
+        card_html = f"""<div class="hadith-card"><div class="card-header"><div class="tags-left"><span class="meta-tag">📖 {book}</span><span class="meta-tag"># {number}</span>{narrator_badge}</div>{grade_badge}</div><div class="arabic-text">{arabic_text}</div></div>"""
 
         st.markdown(card_html, unsafe_allow_html=True)
 
+elif df is None:
+    st.error("Hittade inte filen 'hadith_db.csv'. Se till att du har skapat den och laddat upp den till GitHub.")
 else:
-    st.error("Kunde inte ladda data.")
+    st.error("Filen verkar vara tom.")
