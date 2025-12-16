@@ -92,8 +92,6 @@ with st.spinner("Laddar biblioteket..."):
 
 # --- UI ---
 
-st.title("📖 Hadith Viewer")
-
 # 1. Välj bok
 selected_book = st.radio(
     ["Bukhari", "Muslim"], 
