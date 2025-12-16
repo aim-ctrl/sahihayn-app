@@ -109,12 +109,12 @@ with st.spinner("Laddar bibliotek..."):
     
 # --- ANVÄNDARGRÄNSSNITT ---
 
-c1, c2 = st.columns([1, 0.2])
+c1, c2 = st.columns([1, 1])
 with c1:
     selected_book = st.radio(
         "Välj bok",
         ["Bukhari", "Muslim"], 
-        horizontal=True,
+        horizontal=False,
         label_visibility="collapsed"
     )
 with c2:
