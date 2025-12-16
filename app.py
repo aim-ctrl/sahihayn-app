@@ -15,7 +15,7 @@ st.markdown("""
         visibility: hidden;
     }
     
-    footer { visibility: hidden; } */
+    footer { visibility: hidden; } 
     
     .block-container {
         padding-top: 1rem !important; /* Standard är ofta runt 6rem */
