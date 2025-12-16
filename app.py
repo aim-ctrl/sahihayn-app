@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import html
 from thefuzz import process
 
 # --- CONFIGURATION ---
@@ -216,35 +217,35 @@ display_limit = 50
 # Loopa igenom resultaten
 for i, row in results.head(display_limit).iterrows():
     
-    # 1. STÄDA TEXTEN (Viktigt! Detta fixar felet)
-    # Vi tar bort radbrytningar som trasar sönder HTML-koden
-    arabic_clean = str(row['arabic_text']).replace('\n', ' ').replace('\r', '')
-    english_clean = str(row['text']).replace('\n', '<br>').replace('\r', '')
+    # 1. SÄKERHETSSTÄDA TEXTEN
+    # html.escape gör om " och ' till ofarlig kod så de inte kraschar HTML-strukturen
+    arabic_safe = html.escape(str(row['arabic_text'])).replace('\n', ' ')
+    english_safe = html.escape(str(row['text'])).replace('\n', '<br>')
     
-    # Hantera Grade (om det finns)
+    # Hantera Grade
     grade_badge = ""
     if isinstance(row['grades'], list) and len(row['grades']) > 0:
         try:
             g = row['grades'][0]['grade']
             grade_badge = f"<span class='meta-tag' style='background-color:#fff3e0; color:#e65100; border-color:#ffe0b2;'>{g}</span>"
         except:
-            pass # Om datan är konstig, hoppa över graden
+            pass
 
-    # 2. BYGG HTML-KODEN
-    # Vi använder f-string med explicit struktur
+    # 2. BYGG HTML-KODEN (OBS: INGEN INDRAGNING PÅ RADErna NEDAN!)
+    # Vi trycker koden mot vänsterkanten för att inte förvirra Streamlit
     card_html = f"""
-    <div class="hadith-card">
-        <div style="margin-bottom:15px;">
-            <span class="meta-tag">📖 {row['source_book']}</span>
-            <span class="meta-tag"># {row['hadithnumber']}</span>
-            {grade_badge}
-        </div>
-        <div class="arabic-text">{arabic_clean}</div>
-        <div class="english-text">{english_clean}</div>
-    </div>
-    """
+<div class="hadith-card">
+<div style="margin-bottom:15px;">
+<span class="meta-tag">📖 {row['source_book']}</span>
+<span class="meta-tag"># {row['hadithnumber']}</span>
+{grade_badge}
+</div>
+<div class="arabic-text">{arabic_safe}</div>
+<div class="english-text">{english_safe}</div>
+</div>
+"""
 
-    # 3. RENDERA KORTET
+    # 3. RENDERA
     st.markdown(card_html, unsafe_allow_html=True)
 
 if len(results) > display_limit:
