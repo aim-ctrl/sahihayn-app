@@ -60,7 +60,6 @@ st.markdown("""
     
     /* Gör fetstil lite tydligare i detta teckensnitt */
     .arabic-text b {
-        color: #000000;
         font-weight: 700;
         color: #2E8B57;
     }
