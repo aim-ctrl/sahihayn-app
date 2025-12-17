@@ -17,7 +17,6 @@ st.markdown("""
     header { visibility: hidden !important; }
     footer { visibility: hidden !important; display: none !important; }
     
-    /* Döljer Streamlit-länkar och badges */
     a[href*="streamlit.io/cloud"] { display: none !important; }
     div[data-testid="stStatusWidget"] { display: none !important; }
     [class*="viewerBadge"] { display: none !important; }
@@ -55,15 +54,13 @@ st.markdown("""
         text-align: right;
         color: #000;
         margin-top: 20px;
+        margin-bottom: 20px;
         width: 100%;
     }
     
-    /* --- STYLING FÖR CITAT --- */
-    /* Här bestämmer du hur citaten ska se ut */
     .arabic-text b {
-        font-weight: 700;       /* Fetstil */
-        color: #2E8B57;         /* Grön färg (samma som ramen) för att synas tydligt */
-        background-color: #f9f9f9; /* Valfritt: En mycket svag bakgrundsfärg */
+        font-weight: 700;
+        color: #2E8B57;
     }
 
     .card-header {
@@ -83,6 +80,45 @@ st.markdown("""
         font-size: 0.9rem;
         font-weight: 700;
         border: 1px solid #dcedc8;
+    }
+
+    /* --- STYLING FÖR RÅDATA-TOGGLE --- */
+    details {
+        margin-top: 10px;
+        border-top: 1px dashed #ddd;
+        padding-top: 10px;
+        font-size: 0.8rem;
+        color: #666;
+    }
+    
+    summary {
+        cursor: pointer;
+        font-weight: bold;
+        margin-bottom: 5px;
+        list-style: none; /* Döljer standard-pilen i vissa webbläsare för renare look */
+    }
+    
+    /* Lägg till en egen pil om man vill, eller kör standard */
+    summary::after {
+        content: " ▼"; 
+        font-size: 0.7em;
+    }
+    
+    details[open] summary::after {
+        content: " ▲";
+    }
+
+    .raw-code-box {
+        background-color: #f8f9fa;
+        border: 1px solid #eee;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        white-space: pre-wrap; /* Gör att texten radbryts snyggt */
+        direction: ltr; /* Kod visas oftast bäst LTR, även om innehållet är arabiska */
+        text-align: left;
+        color: #333;
+        font-size: 12px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -140,31 +176,34 @@ result = df[
 if not result.empty:
     row = result.iloc[0]
     
-    # 1. Hämta texten och rensa rader
-    raw_text = str(row['text']).replace('\n', ' ')
+    # 1. RÅTEXT (Sparar denna för togglen)
+    raw_api_text = str(row['text'])
     
-    # 2. Säkra texten för HTML. 
-    # Detta omvandlar " till &quot; vilket var problemet förut.
-    safe_text = html.escape(raw_text)
+    # 2. FORMATERAD TEXT (För visning)
+    # Rensa rader för snyggare visning
+    display_text = raw_api_text.replace('\n', ' ')
+    safe_text = html.escape(display_text)
     
-    # 3. KORRIGERAD LOGIK:
-    # Vi söker efter &quot; (som är ") ELLER « » (vanligt i arabiska).
-    
-    # A. Hantera vanliga citattecken som blivit escapade (&quot;)
-    # Vi sätter <b> runt innehållet, men låter citattecknen vara utanför fetstilen
+    # Fetmarkera citat
     formatted_text = re.sub(r'&quot;(.*?)&quot;', r'&quot;<b>\1</b>&quot;', safe_text)
-    
-    # B. Hantera arabiska citattecken («...» och “...”) om de finns
     formatted_text = re.sub(r'«(.*?)»', r'«<b>\1</b>»', formatted_text)
     formatted_text = re.sub(r'“([^”]*?)”', r'“<b>\1</b>”', formatted_text)
 
+    # 3. BYGG KORTET
+    # Vi lägger till <details> längst ner som innehåller rådatan
     card_html = f"""
     <div class="hadith-card">
         <div class="card-header">
             <span class="meta-tag">📖 {row['book_name']}</span>
             <span class="meta-tag"># {row['hadithnumber']}</span>
         </div>
+        
         <div class="arabic-text">{formatted_text}</div>
+        
+        <details>
+            <summary>Visa rådata (API)</summary>
+            <div class="raw-code-box">{html.escape(raw_api_text)}</div>
+        </details>
     </div>
     """
     st.markdown(card_html, unsafe_allow_html=True)
