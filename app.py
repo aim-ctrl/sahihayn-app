@@ -194,7 +194,7 @@ if not result.empty:
     qal = f'ق{t}ا{t}ل{t}'
     
     # OBS: Sortera längst först för säkerhet
-    orange_words = f'{faqal}|{yaqul}|{qalat}|{qal}'
+    orange_words = f'{faqal}|{faqalat}|{yaqul}|{qalat}|{qal}'
 
     # 3. ROSA GRUPP (Hadathana-familjen + Akhbarani)
     # Hadathana (حَدَّثَنَا)
