@@ -56,8 +56,8 @@ st.markdown("""
     .narrator-highlight { color: #ec407a; font-weight: bold; }
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
     
-    .saw-symbol { color: #d32f2f; font-family: 'Scheherazade New', serif; }
-    .ra-symbol { color: #000000; font-family: 'Scheherazade New', serif; font-weight: normal; }
+    .saw-symbol { color: #d32f2f; font-family: 'Scheherazade New', serif; font-size: 1.2em; }
+    .ra-symbol { color: #000000; font-family: 'Scheherazade New', serif; font-weight: normal; font-size: 1.1em; }
 
     .card-header {
         display: flex; justify-content: space-between; align-items: center;
@@ -113,23 +113,22 @@ if not result.empty:
     if safe_text.count('&quot;') % 2 != 0: safe_text += '&quot;'
 
     # --- FORMATTERINGSLOGIK ---
-    t = r'[\u064B-\u065F]*' # Tashkeel
-    s = r'\s*'             # Mellanslag
-    y = f'[يى]{t}'        # Yaa eller Alif Maqsura
-    # Tatweel (ـ) eller bindestreck (-)
-    dash = r'[-ـ]*' 
+    # t_all inkluderar nu även Tatweel (ـ) och bindestreck (-) tillsammans med vokaler
+    t_all = r'[\u064B-\u065F\u0640-]*' 
+    s = r'\s*'             
+    y = f'[يى]{t_all}'        
 
-    # Uppdaterade mönster med Tatweel-stöd
-    ra_base = f'{dash}ر{t}ض{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ن{t}ه{t}'
-    pattern_ra_anhuma = f'{ra_base}م{t}ا{t}{dash}'
-    pattern_ra_anha   = f'{ra_base}ا{t}{dash}'
-    pattern_ra_anhu   = f'{ra_base}{dash}'
+    # Mönster för Radi Allahu Anhu/Anha/Anhuma
+    ra_base = f'{t_all}ر{t_all}ض{t_all}{y}{s}ا{t_all}ل{t_all}ل{t_all}ه{t_all}{s}ع{t_all}ن{t_all}ه{t_all}'
+    pattern_ra_anhuma = f'{ra_base}م{t_all}ا{t_all}'
+    pattern_ra_anha   = f'{ra_base}ا{t_all}'
+    pattern_ra_anhu   = f'{ra_base}'
 
-    sallallah = f'ص{t}ل{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ل{t}ي{t}ه{t}{s}و{t}س{t}ل{t}م{t}'
-    rasul_allah = f'ر{t}س{t}و{t}ل{t}{s}ا{t}ل{t}ل{t}ه{t}'
+    sallallah = f'ص{t_all}ل{t_all}{y}{s}ا{t_all}ل{t_all}ل{t_all}ه{t_all}{s}ع{t_all}ل{t_all}ي{t_all}ه{t_all}{s}و{t_all}س{t_all}ل{t_all}م{t_all}'
+    rasul_allah = f'ر{t_all}س{t_all}و{t_all}ل{t_all}{s}ا{t_all}ل{t_all}ل{t_all}ه{t_all}'
 
-    orange_words = f'ف{t}ق{t}ا{t}ل{t} |ف{t}ق{t}ا{t}ل{t}ت{t} |ي{t}ق{t}و{t}ل{t} |ق{t}ا{t}ل{t}ت{t} |ق{t}ا{t}ل{t} '
-    pink_words = f'ح{t}د{t}ث{t}ن{t}ا|ح{t}د{t}ث{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ا|عَن{t} |س{t}م{t}ع{t}ت{t}ُ?'
+    orange_words = f'ف{t_all}ق{t_all}ا{t_all}ل{t_all} |ف{t_all}ق{t_all}ا{t_all}ل{t_all}ت{t_all} |ي{t_all}ق{t_all}و{t_all}ل{t_all} |ق{t_all}ا{t_all}ت{t_all} |ق{t_all}ا{t_all}ل{t_all} '
+    pink_words = f'ح{t_all}د{t_all}ث{t_all}ن{t_all}ا|ح{t_all}د{t_all}ث{t_all}ن{t_all}ي|أ{t_all}خ{t_all}ب{t_all}ر{t_all}ن{t_all}ي|أ{t_all}خ{t_all}ب{t_all}ر{t_all}ن{t_all}ا|عَن{t_all} |س{t_all}م{t_all}ع{t_all}ت{t_all}ُ?'
     quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
     
     master_pattern = f'(?P<quote>{quote_str})|(?P<saw>{sallallah})|(?P<ra_anhuma>{pattern_ra_anhuma})|(?P<ra_anha>{pattern_ra_anha})|(?P<ra_anhu>{pattern_ra_anhu})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
