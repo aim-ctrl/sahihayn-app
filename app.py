@@ -21,6 +21,13 @@ st.markdown("""
         padding-bottom: 1rem !important;
     }
 
+    div[data-testid="stNumberInput"] input {
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        color: #2E8B57;
+    }
+
     .hadith-card {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
@@ -35,11 +42,12 @@ st.markdown("""
     
     .arabic-text {
         font-family: 'Scheherazade New', serif;
-        font-size: 26px;
+        font-size: 28px;
         line-height: 1.8;
         direction: rtl;
         text-align: right;
         color: #000;
+        margin-top: 20px;
         width: 100%;
     }
     
@@ -48,8 +56,8 @@ st.markdown("""
     .narrator-highlight { color: #ec407a; font-weight: bold; }
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
     
-    .saw-symbol { color: #d32f2f; font-size: 1.2em; }
-    .ra-symbol { color: #000000; font-size: 1.1em; font-weight: normal; }
+    .saw-symbol { color: #d32f2f; font-family: 'Scheherazade New', serif; }
+    .ra-symbol { color: #000000; font-family: 'Scheherazade New', serif; font-weight: normal; }
 
     .card-header {
         display: flex; justify-content: space-between; align-items: center;
@@ -58,6 +66,12 @@ st.markdown("""
     .meta-tag {
         background-color: #f1f8e9; color: #2e7d32; padding: 6px 14px;
         border-radius: 8px; font-size: 0.9rem; font-weight: 700;
+        border: 1px solid #dcedc8;
+    }
+    .raw-code-box {
+        background-color: #f8f9fa; border: 1px solid #eee; padding: 10px;
+        border-radius: 5px; font-family: monospace; white-space: pre-wrap; 
+        direction: rtl; text-align: right; font-size: 12px; margin-top: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -73,44 +87,54 @@ def get_dataset():
             df['book_name'] = book_name.capitalize()
             return df
         except: return pd.DataFrame()
-    return pd.concat([load_book("bukhari"), load_book("muslim")], ignore_index=True)
+    
+    df_bukhari = load_book("bukhari")
+    df_muslim = load_book("muslim")
+    full_df = pd.concat([df_bukhari, df_muslim], ignore_index=True)
+    # Rensa hadithnummer så de blir jämförbara
+    full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
+    return full_df
 
-df = get_dataset()
+with st.spinner("Laddar..."):
+    df = get_dataset()
 
 # --- ANVÄNDARGRÄNSSNITT ---
 selected_book = st.radio("Välj bok", ["Bukhari", "Muslim"], horizontal=True, label_visibility="collapsed")
-hadith_id = st.number_input("Hadith Nummer", min_value=1, value=1, step=1, label_visibility="collapsed")
+hadith_id = st.number_input("Hadith Nummer", min_value=1, value=1, step=1, format="%d", label_visibility="collapsed")
 
 # --- VISA KORTET ---
 current_num_str = str(hadith_id)
-result = df[(df['book_name'] == selected_book) & (df['hadithnumber'].astype(str) == current_num_str)]
+result = df[(df['book_name'] == selected_book) & (df['hadithnumber'] == current_num_str)]
 
 if not result.empty:
     row = result.iloc[0]
-    safe_text = html.escape(str(row['text']).replace('\n', ''))
+    raw_api_text = str(row['text'])
+    safe_text = html.escape(raw_api_text.replace('\n', ''))
+    
     if safe_text.count('&quot;') % 2 != 0: safe_text += '&quot;'
 
     # --- FORMATTERINGSLOGIK ---
     t = r'[\u064B-\u065F]*' # Tashkeel
-    s = r'\s*'             # Flexibelt mellanslag
-    y = f'[يى]{t}'        # Flexibel Yaa/Alif Maqsura
+    s = r'\s*'             # Mellanslag
+    y = f'[يى]{t}'        # Yaa eller Alif Maqsura
 
-    # Mönster för Radi Allahu Anhu/Anha/Anhuma (utan och med tashkeel)
-    # Vi matchar ord för ord med flexibilitet emellan
+    # Definiera mönster för Radi Allahu Anhu/Anha/Anhuma
+    # Vi inkluderar även "Anhum" för säkerhets skull
     ra_base = f'ر{t}ض{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ن{t}ه{t}'
     pattern_ra_anhuma = f'{ra_base}م{t}ا{t}'
-    pattern_ra_anha   = f'{ra_base}ا{t}'
     pattern_ra_anhu   = f'{ra_base}'
+    pattern_ra_anha   = f'{ra_base}ا{t}'
 
     # SAW och Rasul Allah
     sallallah = f'ص{t}ل{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ل{t}ي{t}ه{t}{s}و{t}س{t}ل{t}م{t}'
     rasul_allah = f'ر{t}س{t}و{t}ل{t}{s}ا{t}ل{t}ل{t}ه{t}'
 
-    # Grupper
+    # Övriga grupper
     orange_words = f'ف{t}ق{t}ا{t}ل{t} |ف{t}ق{t}ا{t}ل{t}ت{t} |ي{t}ق{t}و{t}ل{t} |ق{t}ا{t}ل{t}ت{t} |ق{t}ا{t}ل{t} '
     pink_words = f'ح{t}د{t}ث{t}ن{t}ا|ح{t}د{t}ث{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ا|عَن{t} |س{t}م{t}ع{t}ت{t}ُ?'
     quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
     
+    # Master Pattern - Notera ordningen: Anhuma/Anha före Anhu
     master_pattern = f'(?P<quote>{quote_str})|(?P<saw>{sallallah})|(?P<ra_anhuma>{pattern_ra_anhuma})|(?P<ra_anha>{pattern_ra_anha})|(?P<ra_anhu>{pattern_ra_anhu})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
 
     def formatter_func(match):
@@ -129,6 +153,7 @@ if not result.empty:
 
     formatted_text = re.sub(master_pattern, formatter_func, safe_text)
 
+    # --- RENDERING ---
     st.markdown(f"""
     <div class="hadith-card">
         <div class="card-header">
@@ -136,5 +161,11 @@ if not result.empty:
             <span class="meta-tag"># {row['hadithnumber']}</span>
         </div>
         <div class="arabic-text">{formatted_text}</div>
+        <details>
+            <summary style="font-size:12px; color:#999; margin-top:20px;">Visa originaltext</summary>
+            <div class="raw-code-box">{html.escape(raw_api_text)}</div>
+        </details>
     </div>
     """, unsafe_allow_html=True)
+else:
+    st.info(f"Hittade ingen hadith med nummer {hadith_id} i {selected_book}.")
