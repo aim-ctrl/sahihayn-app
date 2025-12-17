@@ -69,10 +69,9 @@ st.markdown("""
         border: 1px solid #dcedc8;
     }
 
-    /* FIX FÖR ORIGINALTEXTENS SYNLIGHET */
     .raw-code-box {
-        background-color: #262730; /* Mörk bakgrund */
-        color: #ffffff;           /* Vit text */
+        background-color: #262730; 
+        color: #ffffff;           
         border: 1px solid #444;
         padding: 15px;
         border-radius: 8px;
@@ -84,12 +83,7 @@ st.markdown("""
         margin-top: 10px;
     }
     
-    summary {
-        color: #2E8B57;
-        font-weight: bold;
-        cursor: pointer;
-        padding: 5px;
-    }
+    summary { color: #2E8B57; font-weight: bold; cursor: pointer; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -111,7 +105,7 @@ def get_dataset():
     full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
     return full_df
 
-with st.spinner("Laddar..."):
+with st.spinner("Laddar bibliotek..."):
     df = get_dataset()
 
 # --- ANVÄNDARGRÄNSSNITT ---
@@ -124,26 +118,29 @@ result = df[(df['book_name'] == selected_book) & (df['hadithnumber'] == current_
 
 if not result.empty:
     row = result.iloc[0]
-    raw_text = str(row['text']).replace('\n', ' ')
+    original_text = str(row['text']).replace('\n', ' ')
     
-    # --- FORMATTERINGSLOGIK ---
-    # t_all: Vokaler + Tatweel (ـ) + Bindestreck
-    t_all = r'[\u064B-\u065F\u0640-]*' 
-    s = r'\s*'             
-    y = f'[يى]{t_all}'        
+    # --- KNEPET: STÄDNING ---
+    # Vi tar bort alla Tatweel (ـ) och bindestreck (-) först för att de inte ska störa
+    cleaned_text = original_text.replace('ـ', '').replace('-', '')
 
-    # Mönster
-    ra_base = f'{t_all}ر{t_all}ض{t_all}{y}{s}ا{t_all}ل{t_all}ل{t_all}ه{t_all}{s}ع{t_all}ن{t_all}ه{t_all}'
-    pattern_ra_anhuma = f'{ra_base}م{t_all}ا{t_all}'
-    pattern_ra_anha   = f'{ra_base}ا{t_all}'
+    # --- FORMATTERINGSLOGIK ---
+    t = r'[\u064B-\u065F]*' # Endast tashkeel nu, eftersom tatweel är borta
+    s = r'\s*'             
+    y = f'[يى]{t}'        
+
+    # Mönster för Radi Allahu Anhu/Anha/Anhuma
+    ra_base = f'ر{t}ض{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ن{t}ه{t}'
+    pattern_ra_anhuma = f'{ra_base}م{t}ا{t}'
+    pattern_ra_anha   = f'{ra_base}ا{t}'
     pattern_ra_anhu   = f'{ra_base}'
 
-    sallallah = f'ص{t_all}ل{t_all}{y}{s}ا{t_all}ل{t_all}ل{t_all}ه{t_all}{s}ع{t_all}ل{t_all}ي{t_all}ه{t_all}{s}و{t_all}س{t_all}ل{t_all}م{t_all}'
-    rasul_allah = f'ر{t_all}س{t_all}و{t_all}ل{t_all}{s}ا{t_all}ل{t_all}ل{t_all}ه{t_all}'
+    sallallah = f'ص{t}ل{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ل{t}ي{t}ه{t}{s}و{t}س{t}ل{t}م{t}'
+    rasul_allah = f'ر{t}س{t}و{t}ل{t}{s}ا{t}ل{t}ل{t}ه{t}'
 
-    orange_words = f'ف{t_all}ق{t_all}ا{t_all}ل{t_all} |ف{t_all}ق{t_all}ا{t_all}ل{t_all}ت{t_all} |ي{t_all}ق{t_all}و{t_all}ل{t_all} |ق{t_all}ا{t_all}ت{t_all} |ق{t_all}ا{t_all}ل{t_all} '
-    pink_words = f'ح{t_all}د{t_all}ث{t_all}ن{t_all}ا|ح{t_all}د{t_all}ث{t_all}ن{t_all}ي|أ{t_all}خ{t_all}ب{t_all}ر{t_all}ن{t_all}ي|أ{t_all}خ{t_all}ب{t_all}ر{t_all}ن{t_all}ا|عَن{t_all} |س{t_all}م{t_all}ع{t_all}ت{t_all}ُ?'
-    quote_str = r'".*?"|«.*?»|“.*?”' # Enklare citat-matchning före escape
+    orange_words = f'ف{t}ق{t}ا{t}ل{t} |ف{t}ق{t}ا{t}ل{t}ت{t} |ي{t}ق{t}و{t}ل{t} |ق{t}ا{t}ل{t}ت{t} |ق{t}ا{t}ل{t} '
+    pink_words = f'ح{t}د{t}ث{t}ن{t}ا|ح{t}د{t}ث{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ا|عَن{t} |س{t}م{t}ع{t}ت{t}ُ?'
+    quote_str = r'".*?"|«.*?»|“.*?”'
     
     master_pattern = f'(?P<quote>{quote_str})|(?P<saw>{sallallah})|(?P<ra_anhuma>{pattern_ra_anhuma})|(?P<ra_anha>{pattern_ra_anha})|(?P<ra_anhu>{pattern_ra_anhu})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
 
@@ -153,15 +150,13 @@ if not result.empty:
         
         if group_name == 'saw': return '<span class="saw-symbol">ﷺ</span>'
         if group_name in ['ra_anhuma', 'ra_anha', 'ra_anhu']: return '<span class="ra-symbol">ؓ</span>'
-        if group_name == 'quote':
-            return f'<b>{text}</b>'
+        if group_name == 'quote': return f'<b>{text}</b>'
         if group_name == 'pink': return f'<span class="narrator-highlight">{text}</span>'
         if group_name == 'orange': return f'<span class="qal-highlight">{text}</span>'
         if group_name == 'red': return f'<span class="rasul-highlight">{text}</span>'
         return text
 
-    # Formatera råtexten först, escapea sedan i renderingen via st.markdown
-    formatted_text = re.sub(master_pattern, formatter_func, raw_text)
+    formatted_text = re.sub(master_pattern, formatter_func, cleaned_text)
 
     # --- RENDERING ---
     st.markdown(f"""
@@ -173,7 +168,7 @@ if not result.empty:
         <div class="arabic-text">{formatted_text}</div>
         <details>
             <summary>Visa originaltext (rådata)</summary>
-            <div class="raw-code-box">{raw_text}</div>
+            <div class="raw-code-box">{original_text}</div>
         </details>
     </div>
     """, unsafe_allow_html=True)
