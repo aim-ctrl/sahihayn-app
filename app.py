@@ -60,7 +60,7 @@ st.markdown("""
     
     .arabic-text b {
         font-weight: 700;
-        color: #2E8B57;
+        color: #2E8B57; /* Grön färg på citaten */
     }
 
     .card-header {
@@ -82,7 +82,7 @@ st.markdown("""
         border: 1px solid #dcedc8;
     }
 
-    /* --- STYLING FÖR RÅDATA-TOGGLE --- */
+    /* Rådata-boxen */
     details {
         margin-top: 10px;
         border-top: 1px dashed #ddd;
@@ -90,32 +90,19 @@ st.markdown("""
         font-size: 0.8rem;
         color: #666;
     }
-    
     summary {
         cursor: pointer;
         font-weight: bold;
         margin-bottom: 5px;
-        list-style: none; /* Döljer standard-pilen i vissa webbläsare för renare look */
     }
-    
-    /* Lägg till en egen pil om man vill, eller kör standard */
-    summary::after {
-        content: " ▼"; 
-        font-size: 0.7em;
-    }
-    
-    details[open] summary::after {
-        content: " ▲";
-    }
-
     .raw-code-box {
         background-color: #f8f9fa;
         border: 1px solid #eee;
         padding: 10px;
         border-radius: 5px;
         font-family: monospace;
-        white-space: pre-wrap; /* Gör att texten radbryts snyggt */
-        direction: ltr; /* Kod visas oftast bäst LTR, även om innehållet är arabiska */
+        white-space: pre-wrap; 
+        direction: ltr;
         text-align: left;
         color: #333;
         font-size: 12px;
@@ -176,37 +163,36 @@ result = df[
 if not result.empty:
     row = result.iloc[0]
     
-    # 1. RÅTEXT (Sparar denna för togglen)
+    # 1. Råtext för API-toggle
     raw_api_text = str(row['text'])
     
-    # 2. FORMATERAD TEXT (För visning)
-    # Rensa rader för snyggare visning
+    # 2. Rensa text för visning
     display_text = raw_api_text.replace('\n', ' ')
+    
+    # 3. HTML Escape (Gör om " till &quot;)
     safe_text = html.escape(display_text)
     
-    # Fetmarkera citat
+    # 4. Regex för att fetmarkera citat
     formatted_text = re.sub(r'&quot;(.*?)&quot;', r'&quot;<b>\1</b>&quot;', safe_text)
     formatted_text = re.sub(r'«(.*?)»', r'«<b>\1</b>»', formatted_text)
     formatted_text = re.sub(r'“([^”]*?)”', r'“<b>\1</b>”', formatted_text)
 
-    # 3. BYGG KORTET
-    # Vi lägger till <details> längst ner som innehåller rådatan
+    # 5. BYGG KORTET (OBS! Inga indrag i HTML-strängen här!)
     card_html = f"""
-    <div class="hadith-card">
-        <div class="card-header">
-            <span class="meta-tag">📖 {row['book_name']}</span>
-            <span class="meta-tag"># {row['hadithnumber']}</span>
-        </div>
-        
-        <div class="arabic-text">{formatted_text}</div>
-        
-        <details>
-            <summary>Visa rådata (API)</summary>
-            <div class="raw-code-box">{html.escape(raw_api_text)}</div>
-        </details>
+<div class="hadith-card">
+    <div class="card-header">
+        <span class="meta-tag">📖 {row['book_name']}</span>
+        <span class="meta-tag"># {row['hadithnumber']}</span>
     </div>
-    """
+    <div class="arabic-text">{formatted_text}</div>
+    <details>
+        <summary>Visa rådata (API)</summary>
+        <div class="raw-code-box">{html.escape(raw_api_text)}</div>
+    </details>
+</div>
+"""
     st.markdown(card_html, unsafe_allow_html=True)
+    
     st.write("")
     st.write("")
     st.write("")
