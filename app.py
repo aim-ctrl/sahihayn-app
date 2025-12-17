@@ -13,34 +13,26 @@ st.markdown("""
     
     /* --- TOTAL DÖLJNING AV STREAMLIT UI --- */
     
-    /* 1. Tar bort Main Menu och Header */
     #MainMenu { visibility: hidden !important; }
     header { visibility: hidden !important; }
+    footer { visibility: hidden !important; display: none !important; }
+
+    /* --- "KRYPSKYTTE" MOT LÄNKEN --- */
     
-    /* 2. Tar bort standard-footern */
-    footer { 
-        visibility: hidden !important; 
+    /* 1. Detta letar efter alla länkar (a-taggar) som innehåller texten 'streamlit.io/cloud' */
+    a[href*="streamlit.io/cloud"] {
         display: none !important;
-        height: 0 !important;
-    }
-    
-    /* 3. AGGRESSIVT: Tar bort Viewer Badge (Hosted with Streamlit) */
-    /* Vi tar bort 'div' och använder bara klass-wildcard */
-    [class*="viewerBadge"] {
-        display: none !important;
-        opacity: 0 !important;
-        height: 0 !important;
-        width: 0 !important;
-        pointer-events: none !important;
+        visibility: hidden !important;
     }
 
-    /* 4. Siktar specifikt på länkar som går till Streamlit (själva knappen) */
-    a[href*="streamlit.io"] {
+    /* 2. Döljer behållaren som länken ligger i (Viewer Badge) */
+    div[data-testid="stStatusWidget"] {
         display: none !important;
+        visibility: hidden !important;
     }
     
-    /* 5. Tar bort profil-ikonen bredvid texten om den ligger separat */
-    img[alt="Profile picture"] {
+    /* 3. Ett bredare nät för element med 'viewer' i namnet */
+    [class*="viewerBadge"] {
         display: none !important;
     }
 
