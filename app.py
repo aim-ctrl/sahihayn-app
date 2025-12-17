@@ -11,24 +11,30 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
-    /* --- DÖLJER STREAMLIT UI-ELEMENT --- */
+    /* --- DÖLJER ALLA STREAMLIT-ELEMENT --- */
     
-    /* Döljer hamburgermenyn (tre punkter uppe till höger) */
+    /* 1. Döljer hamburgermenyn uppe till höger */
     #MainMenu {
         visibility: hidden;
     }
     
-    /* Döljer färgade linjen högst upp */
+    /* 2. Döljer header-linjen */
     header {
         visibility: hidden;
     }
     
-    /* Döljer "Made with Streamlit" footer och GitHub-länkar längst ner */
+    /* 3. Döljer standard-footern */
     footer {
         visibility: hidden;
-        display: none !important;
     }
     
+    /* 4. NYTT: Döljer "Hosted with Streamlit" (Viewer Badge) i nedre hörnet */
+    /* Denna selektor letar efter alla div:ar som börjar med klassnamnet 'viewerBadge' */
+    div[class^='viewerBadge'] {
+        display: none !important; 
+        visibility: hidden !important;
+    }
+
     /* --- DIN EGNA DESIGN --- */
 
     .block-container {
