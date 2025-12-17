@@ -202,9 +202,10 @@ if not result.empty:
     hadathani_singular = f'ح{t}د{t}ث{t}ن{t}ي'
     # Akhbarani (أَخْبَرَنِي) - NY
     akhbarani = f'أ{t}خ{t}ب{t}ر{t}ن{t}ي'
+    akhbarana = f'أ{t}خ{t}ب{t}ر{t}ن{t}ا'
     
     # Lägg till akhbarani i listan med | (OR-operator)
-    pink_words = f'{hadathana}|{hadathani_singular}|{akhbarani}'
+    pink_words = f'{hadathana}|{hadathani_singular}|{akhbarani}|{akhbarana}'
 
     # 4. CITAT GRUPP
     quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
