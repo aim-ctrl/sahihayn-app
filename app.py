@@ -91,7 +91,6 @@ def get_dataset():
     df_bukhari = load_book("bukhari")
     df_muslim = load_book("muslim")
     full_df = pd.concat([df_bukhari, df_muslim], ignore_index=True)
-    # Rensa hadithnummer så de blir jämförbara
     full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
     return full_df
 
@@ -117,24 +116,21 @@ if not result.empty:
     t = r'[\u064B-\u065F]*' # Tashkeel
     s = r'\s*'             # Mellanslag
     y = f'[يى]{t}'        # Yaa eller Alif Maqsura
+    b = r'-?'              # Valfritt bindestreck
 
-    # Definiera mönster för Radi Allahu Anhu/Anha/Anhuma
-    # Vi inkluderar även "Anhum" för säkerhets skull
-    ra_base = f'ر{t}ض{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ن{t}ه{t}'
-    pattern_ra_anhuma = f'{ra_base}م{t}ا{t}'
-    pattern_ra_anhu   = f'{ra_base}'
-    pattern_ra_anha   = f'{ra_base}ا{t}'
+    # Uppdaterade mönster med valfria bindestreck runt om
+    ra_base = f'{b}ر{t}ض{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ن{t}ه{t}'
+    pattern_ra_anhuma = f'{ra_base}م{t}ا{t}{b}'
+    pattern_ra_anha   = f'{ra_base}ا{t}{b}'
+    pattern_ra_anhu   = f'{ra_base}{b}'
 
-    # SAW och Rasul Allah
     sallallah = f'ص{t}ل{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ل{t}ي{t}ه{t}{s}و{t}س{t}ل{t}م{t}'
     rasul_allah = f'ر{t}س{t}و{t}ل{t}{s}ا{t}ل{t}ل{t}ه{t}'
 
-    # Övriga grupper
     orange_words = f'ف{t}ق{t}ا{t}ل{t} |ف{t}ق{t}ا{t}ل{t}ت{t} |ي{t}ق{t}و{t}ل{t} |ق{t}ا{t}ل{t}ت{t} |ق{t}ا{t}ل{t} '
     pink_words = f'ح{t}د{t}ث{t}ن{t}ا|ح{t}د{t}ث{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ا|عَن{t} |س{t}م{t}ع{t}ت{t}ُ?'
     quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
     
-    # Master Pattern - Notera ordningen: Anhuma/Anha före Anhu
     master_pattern = f'(?P<quote>{quote_str})|(?P<saw>{sallallah})|(?P<ra_anhuma>{pattern_ra_anhuma})|(?P<ra_anha>{pattern_ra_anha})|(?P<ra_anhu>{pattern_ra_anhu})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
 
     def formatter_func(match):
@@ -162,7 +158,7 @@ if not result.empty:
         </div>
         <div class="arabic-text">{formatted_text}</div>
         <details>
-            <summary style="font-size:12px; color:#999; margin-top:20px;">Visa originaltext</summary>
+            <summary style="font-size:12px; color:#999; margin-top:20px; cursor:pointer;">Visa originaltext</summary>
             <div class="raw-code-box">{html.escape(raw_api_text)}</div>
         </details>
     </div>
