@@ -11,29 +11,36 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
-    /* --- AGGRESSIV DÖLJNING AV STREAMLIT UI --- */
+    /* --- DEN STORA STÄDNINGEN (Tar bort knappen i din bild) --- */
     
-    /* 1. Döljer hamburgermenyn och topp-headern */
-    #MainMenu { visibility: hidden; }
-    header { visibility: hidden; }
-    
-    /* 2. Döljer den vanliga footern */
-    footer { 
-        visibility: hidden; 
-        display: none !important;
-        height: 0px !important;
-    }
-    
-    /* 3. Döljer "Deploy"-knappen (om den syns) */
-    .stDeployButton {
+    /* 1. Detta tar bort hela verktygsfältet där "Manage app"-knappen bor */
+    [data-testid="stToolbar"] {
+        visibility: hidden !important;
         display: none !important;
     }
 
-    /* 4. Döljer den specifika Viewer Badgen (Github/Streamlit-länkarna) */
-    /* Vi använder *= för att hitta klasser som INNEHÅLLER ordet viewerBadge någonstans */
-    div[class*="viewerBadge"] {
-        display: none !important;
+    /* 2. Detta tar bort hela topp-headern (om något skulle ligga kvar där) */
+    [data-testid="stHeader"] {
         visibility: hidden !important;
+        display: none !important;
+    }
+    
+    /* 3. Döljer den färgade linjen högst upp (decoration) */
+    [data-testid="stDecoration"] {
+        visibility: hidden !important;
+        display: none !important;
+    }
+
+    /* 4. Döljer gamla menyer och footers för säkerhets skull */
+    #MainMenu {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    
+    footer {
+        visibility: hidden !important;
+        display: none !important;
+        height: 0px !important;
     }
 
     /* --- DIN EGNA DESIGN --- */
