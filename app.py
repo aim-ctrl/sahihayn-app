@@ -11,27 +11,28 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
-    /* --- DÖLJER ALLA STREAMLIT-ELEMENT --- */
+    /* --- AGGRESSIV DÖLJNING AV STREAMLIT UI --- */
     
-    /* 1. Döljer hamburgermenyn uppe till höger */
-    #MainMenu {
-        visibility: hidden;
+    /* 1. Döljer hamburgermenyn och topp-headern */
+    #MainMenu { visibility: hidden; }
+    header { visibility: hidden; }
+    
+    /* 2. Döljer den vanliga footern */
+    footer { 
+        visibility: hidden; 
+        display: none !important;
+        height: 0px !important;
     }
     
-    /* 2. Döljer header-linjen */
-    header {
-        visibility: hidden;
+    /* 3. Döljer "Deploy"-knappen (om den syns) */
+    .stDeployButton {
+        display: none !important;
     }
-    
-    /* 3. Döljer standard-footern */
-    footer {
-        visibility: hidden;
-    }
-    
-    /* 4. NYTT: Döljer "Hosted with Streamlit" (Viewer Badge) i nedre hörnet */
-    /* Denna selektor letar efter alla div:ar som börjar med klassnamnet 'viewerBadge' */
-    div[class^='viewerBadge'] {
-        display: none !important; 
+
+    /* 4. Döljer den specifika Viewer Badgen (Github/Streamlit-länkarna) */
+    /* Vi använder *= för att hitta klasser som INNEHÅLLER ordet viewerBadge någonstans */
+    div[class*="viewerBadge"] {
+        display: none !important;
         visibility: hidden !important;
     }
 
@@ -113,7 +114,6 @@ def get_dataset():
     df_muslim = load_book("muslim")
     full_df = pd.concat([df_bukhari, df_muslim], ignore_index=True)
     
-    # Städa numren (ta bort .0 om det finns)
     full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
     
     return full_df
@@ -150,7 +150,6 @@ result = df[
 
 if not result.empty:
     row = result.iloc[0]
-    # Säkra texten för HTML-rendering
     arabic_text = html.escape(str(row['text'])).replace('\n', ' ')
     
     card_html = f"""
