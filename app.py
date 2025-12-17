@@ -69,9 +69,15 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* Hadathana-gruppen: Ljusrosa (Men tillräckligt mörk för att läsas) */
+    /* Hadathana-gruppen: Rosa */
     .narrator-highlight {
-        color: #ec407a; /* En tydlig rosa nyans */
+        color: #ec407a; 
+        font-weight: bold;
+    }
+
+    /* Rasul-gruppen: Röd */
+    .rasul-highlight {
+        color: #d32f2f;
         font-weight: bold;
     }
 
@@ -192,40 +198,32 @@ if not result.empty:
     yaqul = f'ي{t}ق{t}و{t}ل{t} '
     qalat = f'ق{t}ا{t}ل{t}ت{t} '
     qal = f'ق{t}ا{t}ل{t} '
-    
-    # OBS: Sortera längst först för säkerhet
     orange_words = f'{faqal}|{faqalat}|{yaqul}|{qalat}|{qal}'
 
-    # 3. ROSA GRUPP (Hadathana-familjen + Akhbarani)
-    # Hadathana (حَدَّثَنَا)
+    # 3. ROSA GRUPP (Hadathana-familjen + Sami'tu)
     hadathana = f'ح{t}د{t}ث{t}ن{t}ا'
-    # Hadathani (حَدَّثَنِي)
     hadathani_singular = f'ح{t}د{t}ث{t}ن{t}ي'
-    # Akhbarani (أَخْبَرَنِي) - NY
     akhbarani = f'أ{t}خ{t}ب{t}ر{t}ن{t}ي'
     akhbarana = f'أ{t}خ{t}ب{t}ر{t}ن{t}ا'
     an = f'عَن{t} '
-    samitu = f'س{t}م{t}ع{t}ت{t}ُ '
-    # Lägg till akhbarani i listan med | (OR-operator)
+    samitu = f'س{t}م{t}ع{t}ت{t}ُ?' 
     pink_words = f'{hadathana}|{hadathani_singular}|{akhbarani}|{akhbarana}|{an}|{samitu}'
 
-    # 4. CITAT GRUPP
+    # 4. RÖD GRUPP (Rasul Allah)
+    rasul_allah = f'ر{t}س{t}و{t}ل{t} {t}ا{t}ل{t}ل{t}ه{t}'
+
+    # 5. CITAT GRUPP
     quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
     
-    # 5. BYGG MASTER PATTERN MED NAMNGIVNA GRUPPER
-    # Syntaxen (?P<namn>mönster) låter oss identifiera VAD som träffades.
-    master_pattern = f'(?P<quote>{quote_str})|(?P<pink>{pink_words})|(?P<orange>{orange_words})'
+    # 6. BYGG MASTER PATTERN
+    master_pattern = f'(?P<quote>{quote_str})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
 
-    # 6. ERSÄTTNINGSFUNKTION
+    # 7. ERSÄTTNINGSFUNKTION
     def formatter_func(match):
         text = match.group(0)
-        
-        # Kolla vilken grupp som gav träff via match.lastgroup
         group_name = match.lastgroup
         
         if group_name == 'quote':
-            # Citat: Fetstilt & Grönt (via CSS för <b>)
-            # Vi måste ta bort citattecknen temporärt för att sätta <b> inuti
             if text.startswith('&quot;'):
                 inner = text[6:-6]
                 return f'&quot;<b>{inner}</b>&quot;'
@@ -238,12 +236,13 @@ if not result.empty:
             return text
             
         elif group_name == 'pink':
-            # Hadathana: Rosa
             return f'<span class="narrator-highlight">{text}</span>'
             
         elif group_name == 'orange':
-            # Qal: Orange
             return f'<span class="qal-highlight">{text}</span>'
+            
+        elif group_name == 'red':
+            return f'<span class="rasul-highlight">{text}</span>'
             
         return text
 
@@ -271,4 +270,4 @@ if not result.empty:
     st.write("")
     st.write("")
 else:
-    st.info(f"Nummer **{current_num_str}** finns inte i **{selected_book}**. (Vissa nummer kan saknas eller ha suffix som 'a').")
+    st.info(f"Nummer **{current_num_str}** finns inte i **{selected_book}**.")
