@@ -167,7 +167,7 @@ if not result.empty:
         </div>
         <div class="arabic-text">{formatted_text}</div>
         <details>
-            <summary>Visa originaltext (rådata)</summary>
+            <summary>Original text</summary>
             <div class="raw-code-box">{original_text}</div>
         </details>
     </div>
