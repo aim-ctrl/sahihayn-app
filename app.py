@@ -46,7 +46,7 @@ st.markdown("""
     
     .arabic-text {
         font-family: 'Scheherazade New', serif;
-        font-size: 24px;
+        font-size: 26px; /* Något större för att symbolen ska synas bra */
         line-height: 1.8;
         direction: rtl;
         text-align: right;
@@ -58,27 +58,18 @@ st.markdown("""
     
     .arabic-text b {
         font-weight: 700;
-        color: #2E8B57; /* Grön färg på citaten */
+        color: #2E8B57;
     }
 
-    /* FÄRGER */
+    .qal-highlight { color: #ff8c00; font-weight: bold; }
+    .narrator-highlight { color: #ec407a; font-weight: bold; }
+    .rasul-highlight { color: #d32f2f; font-weight: bold; }
     
-    /* Qal-gruppen: Orange */
-    .qal-highlight {
-        color: #ff8c00; 
-        font-weight: bold;
-    }
-    
-    /* Hadathana-gruppen: Rosa */
-    .narrator-highlight {
-        color: #ec407a; 
-        font-weight: bold;
-    }
-
-    /* Rasul-gruppen: Röd */
-    .rasul-highlight {
-        color: #d32f2f;
-        font-weight: bold;
+    .saw-symbol {
+        color: #2E8B57; /* Grön färg på symbolen */
+        font-family: 'Scheherazade New', serif;
+        font-size: 1.2em;
+        margin: 0 2px;
     }
 
     .card-header {
@@ -107,11 +98,7 @@ st.markdown("""
         font-size: 0.8rem;
         color: #666;
     }
-    summary {
-        cursor: pointer;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
+    summary { cursor: pointer; font-weight: bold; margin-bottom: 5px; }
     .raw-code-box {
         background-color: #f8f9fa;
         border: 1px solid #eee;
@@ -152,34 +139,16 @@ with st.spinner("Laddar bibliotek..."):
     
 # --- ANVÄNDARGRÄNSSNITT ---
 
-selected_book = st.radio(
-    "Välj bok",
-    ["Bukhari", "Muslim"], 
-    horizontal=True,
-    label_visibility="collapsed"
-)
-
-hadith_id = st.number_input(
-    "Hadith Nummer", 
-    min_value=1, 
-    value=1, 
-    step=1,
-    format="%d" ,
-    label_visibility="collapsed"
-)
+selected_book = st.radio("Välj bok", ["Bukhari", "Muslim"], horizontal=True, label_visibility="collapsed")
+hadith_id = st.number_input("Hadith Nummer", min_value=1, value=1, step=1, format="%d", label_visibility="collapsed")
 
 # --- VISA KORTET ---
 
 current_num_str = str(hadith_id)
-
-result = df[
-    (df['book_name'] == selected_book) & 
-    (df['hadithnumber'] == current_num_str)
-]
+result = df[(df['book_name'] == selected_book) & (df['hadithnumber'] == current_num_str)]
 
 if not result.empty:
     row = result.iloc[0]
-    
     raw_api_text = str(row['text'])
     display_text = raw_api_text.replace('\n', '')
     safe_text = html.escape(display_text)
@@ -188,68 +157,59 @@ if not result.empty:
         safe_text += '&quot;'
 
     # --- FORMATTERINGSLOGIK ---
-    
-    # 1. Definiera Tashkeel (vokaler)
     t = r'[\u064B-\u065F]*' 
 
-    # 2. ORANGE GRUPP (Qal-familjen)
-    faqal = f'ف{t}ق{t}ا{t}ل{t} '
-    faqalat = f'ف{t}ق{t}ا{t}ل{t}ت{t} '
-    yaqul = f'ي{t}ق{t}و{t}ل{t} '
-    qalat = f'ق{t}ا{t}ل{t}ت{t} '
-    qal = f'ق{t}ا{t}ل{t} '
-    orange_words = f'{faqal}|{faqalat}|{yaqul}|{qalat}|{qal}'
+    # 1. ORANGE GRUPP (Qal)
+    orange_words = f'ف{t}ق{t}ا{t}ل{t} |ف{t}ق{t}ا{t}ل{t}ت{t} |ي{t}ق{t}و{t}ل{t} |ق{t}ا{t}ل{t}ت{t} |ق{t}ا{t}ل{t} '
 
-    # 3. ROSA GRUPP (Hadathana-familjen + Sami'tu)
+    # 2. ROSA GRUPP (Narrators)
     hadathana = f'ح{t}د{t}ث{t}ن{t}ا'
-    hadathani_singular = f'ح{t}د{t}ث{t}ن{t}ي'
+    hadathani = f'ح{t}د{t}ث{t}ن{t}ي'
     akhbarani = f'أ{t}خ{t}ب{t}ر{t}ن{t}ي'
     akhbarana = f'أ{t}خ{t}ب{t}ر{t}ن{t}ا'
     an = f'عَن{t} '
     samitu = f'س{t}م{t}ع{t}ت{t}ُ?' 
-    pink_words = f'{hadathana}|{hadathani_singular}|{akhbarani}|{akhbarana}|{an}|{samitu}'
+    pink_words = f'{hadathana}|{hadathani}|{akhbarani}|{akhbarana}|{an}|{samitu}'
 
-    # 4. RÖD GRUPP (Rasul Allah)
+    # 3. RÖD GRUPP (Rasul Allah)
     rasul_allah = f'ر{t}س{t}و{t}ل{t} {t}ا{t}ل{t}ل{t}ه{t}'
 
-    # 5. CITAT GRUPP
+    # 4. SAW SYMBOL (صلى الله عليه وسلم)
+    # Matchar frasen med alla möjliga vokaler
+    sallallah = f'ص{t}ل{t}ى{t} {t}ا{t}ل{t}ل{t}ه{t} {t}ع{t}ل{t}ي{t}ه{t} {t}و{t}س{t}ل{t}م{t}'
+
+    # 5. CITAT
     quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
     
-    # 6. BYGG MASTER PATTERN
-    master_pattern = f'(?P<quote>{quote_str})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
+    # MASTER PATTERN
+    master_pattern = f'(?P<quote>{quote_str})|(?P<saw>{sallallah})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
 
-    # 7. ERSÄTTNINGSFUNKTION
     def formatter_func(match):
         text = match.group(0)
         group_name = match.lastgroup
         
-        if group_name == 'quote':
+        if group_name == 'saw':
+            # Ersätt hela frasen med symbolen ﷺ
+            return '<span class="saw-symbol">ﷺ</span>'
+        
+        elif group_name == 'quote':
             if text.startswith('&quot;'):
-                inner = text[6:-6]
-                return f'&quot;<b>{inner}</b>&quot;'
+                return f'&quot;<b>{text[6:-6]}</b>&quot;'
             elif text.startswith('«'):
-                inner = text[1:-1]
-                return f'«<b>{inner}</b>»'
+                return f'«<b>{text[1:-1]}</b>»'
             elif text.startswith('“'):
-                inner = text[1:-1]
-                return f'“<b>{inner}</b>”'
+                return f'“<b>{text[1:-1]}</b>”'
             return text
             
         elif group_name == 'pink':
             return f'<span class="narrator-highlight">{text}</span>'
-            
         elif group_name == 'orange':
             return f'<span class="qal-highlight">{text}</span>'
-            
         elif group_name == 'red':
             return f'<span class="rasul-highlight">{text}</span>'
-            
         return text
 
-    # Kör sök och ersätt
     formatted_text = re.sub(master_pattern, formatter_func, safe_text)
-
-    # --- SLUT PÅ FORMATTERING ---
 
     card_html = f"""
 <div class="hadith-card">
@@ -265,9 +225,5 @@ if not result.empty:
 </div>
 """
     st.markdown(card_html, unsafe_allow_html=True)
-    
-    st.write("")
-    st.write("")
-    st.write("")
 else:
     st.info(f"Nummer **{current_num_str}** finns inte i **{selected_book}**.")
