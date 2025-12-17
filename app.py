@@ -103,8 +103,8 @@ st.markdown("""
         font-family: monospace;
         white-space: pre-wrap; 
         direction: rtr;
-        text-align: left;
-        color: #333;
+        text-align: right;
+        color: #000;
         font-size: 12px;
     }
 </style>
