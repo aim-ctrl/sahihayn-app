@@ -95,7 +95,7 @@ st.markdown("""
         margin-top: 10px;
     }
     
-    summary { color: #2E8B57; font-weight: bold; cursor: pointer; }
+    summary { color: #000; font-weight: bold; cursor: pointer; }
 </style>
 """, unsafe_allow_html=True)
 
