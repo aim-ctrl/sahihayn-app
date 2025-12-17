@@ -94,7 +94,6 @@ st.markdown("""
         cursor: pointer;
         font-weight: bold;
         margin-bottom: 5px;
-        direction: rtl
     }
     .raw-code-box {
         background-color: #f8f9fa;
@@ -103,7 +102,7 @@ st.markdown("""
         border-radius: 5px;
         font-family: monospace;
         white-space: pre-wrap; 
-        direction: ltr;
+        direction: rtr;
         text-align: left;
         color: #333;
         font-size: 12px;
