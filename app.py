@@ -46,7 +46,7 @@ st.markdown("""
     
     .arabic-text {
         font-family: 'Scheherazade New', serif;
-        font-size: 26px; /* Något större för att symbolen ska synas bra */
+        font-size: 26px;
         line-height: 1.8;
         direction: rtl;
         text-align: right;
@@ -65,11 +65,18 @@ st.markdown("""
     .narrator-highlight { color: #ec407a; font-weight: bold; }
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
     
+    /* ﷺ ska vara röd */
     .saw-symbol {
-        color: #2E8B57; /* Grön färg på symbolen */
+        color: #d32f2f; 
         font-family: 'Scheherazade New', serif;
         font-size: 1.2em;
-        margin: 0 2px;
+    }
+
+    /* RA-symboler ska vara svarta */
+    .ra-symbol {
+        color: #000000;
+        font-family: 'Scheherazade New', serif;
+        font-size: 1.1em;
     }
 
     .card-header {
@@ -159,10 +166,10 @@ if not result.empty:
     # --- FORMATTERINGSLOGIK ---
     t = r'[\u064B-\u065F]*' 
 
-    # 1. ORANGE GRUPP (Qal)
+    # 1. ORANGE GRUPP
     orange_words = f'ف{t}ق{t}ا{t}ل{t} |ف{t}ق{t}ا{t}ل{t}ت{t} |ي{t}ق{t}و{t}ل{t} |ق{t}ا{t}ل{t}ت{t} |ق{t}ا{t}ل{t} '
 
-    # 2. ROSA GRUPP (Narrators)
+    # 2. ROSA GRUPP
     hadathana = f'ح{t}د{t}ث{t}ن{t}ا'
     hadathani = f'ح{t}د{t}ث{t}ن{t}ي'
     akhbarani = f'أ{t}خ{t}ب{t}ر{t}ن{t}ي'
@@ -171,27 +178,34 @@ if not result.empty:
     samitu = f'س{t}م{t}ع{t}ت{t}ُ?' 
     pink_words = f'{hadathana}|{hadathani}|{akhbarani}|{akhbarana}|{an}|{samitu}'
 
-    # 3. RÖD GRUPP (Rasul Allah)
+    # 3. RÖD GRUPP (Rasul Allah + SAW Symbol)
     rasul_allah = f'ر{t}س{t}و{t}ل{t} {t}ا{t}ل{t}ل{t}ه{t}'
-
-    # 4. SAW SYMBOL (صلى الله عليه وسلم)
-    # Matchar frasen med alla möjliga vokaler
     sallallah = f'ص{t}ل{t}ى{t} {t}ا{t}ل{t}ل{t}ه{t} {t}ع{t}ل{t}ي{t}ه{t} {t}و{t}س{t}ل{t}م{t}'
+
+    # 4. SVART GRUPP (Radi Allahu Anhuma/Anhu/Anha)
+    ra_anhuma = f'ر{t}ض{t}ي{t} {t}ا{t}ل{t}ل{t}ه{t} {t}ع{t}ن{t}ه{t}م{t}ا{t}'
+    ra_anhu = f'ر{t}ض{t}ي{t} {t}ا{t}ل{t}ل{t}ه{t} {t}ع{t}ن{t}ه{t}'
+    ra_anha = f'ر{t}ض{t}ي{t} {t}ا{t}ل{t}ل{t}ه{t} {t}ع{t}ن{t}ه{t}ا{t}'
 
     # 5. CITAT
     quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
     
-    # MASTER PATTERN
-    master_pattern = f'(?P<quote>{quote_str})|(?P<saw>{sallallah})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
+    # MASTER PATTERN (Viktigt: Anhuma före Anhu för att matcha den längre strängen först)
+    master_pattern = f'(?P<quote>{quote_str})|(?P<saw>{sallallah})|(?P<ra_anhuma>{ra_anhuma})|(?P<ra_anhu>{ra_anhu})|(?P<ra_anha>{ra_anha})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
 
     def formatter_func(match):
         text = match.group(0)
         group_name = match.lastgroup
         
         if group_name == 'saw':
-            # Ersätt hela frasen med symbolen ﷺ
             return '<span class="saw-symbol">ﷺ</span>'
         
+        elif group_name == 'ra_anhuma':
+            return '<span class="ra-symbol">ؓ</span>' # Unicode för Anhuma-ligatur alternativt RA-tecken
+        
+        elif group_name == 'ra_anhu' or group_name == 'ra_anha':
+            return '<span class="ra-symbol">ؓ</span>' # Standard RA-tecken
+            
         elif group_name == 'quote':
             if text.startswith('&quot;'):
                 return f'&quot;<b>{text[6:-6]}</b>&quot;'
