@@ -188,6 +188,7 @@ if not result.empty:
 
     # 2. ORANGE GRUPP (Qal-familjen)
     faqal = f'ف{t}ق{t}ا{t}ل{t}'
+    faqalat = f'ف{t}ق{t}ا{t}ل{t}ت{t}'
     yaqul = f'ي{t}ق{t}و{t}ل{t}'
     qalat = f'ق{t}ا{t}ل{t}ت{t}'
     qal = f'ق{t}ا{t}ل{t}'
