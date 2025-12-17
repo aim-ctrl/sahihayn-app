@@ -56,8 +56,22 @@ st.markdown("""
     .narrator-highlight { color: #ec407a; font-weight: bold; }
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
     
-    .saw-symbol { color: #d32f2f; font-family: 'Scheherazade New', serif; font-size: 1.2em; }
-    .ra-symbol { color: #000000; font-family: 'Scheherazade New', serif; font-weight: normal; font-size: 1.1em; }
+    /* ﷺ ska vara röd och ha lite avstånd */
+    .saw-symbol { 
+        color: #d32f2f; 
+        font-family: 'Scheherazade New', serif; 
+        font-size: 1.1em;
+        margin-right: 4px; 
+    }
+
+    /* RA-symboler i svart med avstånd för att inte dölja tashkeel */
+    .ra-symbol { 
+        color: #000000; 
+        font-family: 'Scheherazade New', serif; 
+        font-weight: normal; 
+        font-size: 1.1em;
+        margin-right: 4px; /* Skapar luft till namnet */
+    }
 
     .card-header {
         display: flex; justify-content: space-between; align-items: center;
@@ -120,16 +134,14 @@ if not result.empty:
     row = result.iloc[0]
     original_text = str(row['text']).replace('\n', ' ')
     
-    # --- KNEPET: STÄDNING ---
-    # Vi tar bort alla Tatweel (ـ) och bindestreck (-) först för att de inte ska störa
+    # KNEPET: STÄDNING (Tar bort Tatweel och bindestreck)
     cleaned_text = original_text.replace('ـ', '').replace('-', '')
 
     # --- FORMATTERINGSLOGIK ---
-    t = r'[\u064B-\u065F]*' # Endast tashkeel nu, eftersom tatweel är borta
+    t = r'[\u064B-\u065F]*' 
     s = r'\s*'             
     y = f'[يى]{t}'        
 
-    # Mönster för Radi Allahu Anhu/Anha/Anhuma
     ra_base = f'ر{t}ض{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ن{t}ه{t}'
     pattern_ra_anhuma = f'{ra_base}م{t}ا{t}'
     pattern_ra_anha   = f'{ra_base}ا{t}'
@@ -148,8 +160,13 @@ if not result.empty:
         group_name = match.lastgroup
         text = match.group(0)
         
-        if group_name == 'saw': return '<span class="saw-symbol">ﷺ</span>'
-        if group_name in ['ra_anhuma', 'ra_anha', 'ra_anhu']: return '<span class="ra-symbol">ؓ</span>'
+        # Här lägger vi till &nbsp; (hårt mellanslag) före symbolen för att flytta den
+        if group_name == 'saw': 
+            return '&nbsp;<span class="saw-symbol">ﷺ</span>'
+        
+        if group_name in ['ra_anhuma', 'ra_anha', 'ra_anhu']: 
+            return '&nbsp;<span class="ra-symbol">ؓ</span>'
+            
         if group_name == 'quote': return f'<b>{text}</b>'
         if group_name == 'pink': return f'<span class="narrator-highlight">{text}</span>'
         if group_name == 'orange': return f'<span class="qal-highlight">{text}</span>'
@@ -167,7 +184,7 @@ if not result.empty:
         </div>
         <div class="arabic-text">{formatted_text}</div>
         <details>
-            <summary>Original text</summary>
+            <summary>Visa originaltext (rådata)</summary>
             <div class="raw-code-box">{original_text}</div>
         </details>
     </div>
