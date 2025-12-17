@@ -56,7 +56,6 @@ st.markdown("""
     .narrator-highlight { color: #ec407a; font-weight: bold; }
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
     
-    /* ﷺ ska vara röd och ha lite avstånd */
     .saw-symbol { 
         color: #d32f2f; 
         font-family: 'Scheherazade New', serif; 
@@ -64,13 +63,12 @@ st.markdown("""
         margin-right: 4px; 
     }
 
-    /* RA-symboler i svart med avstånd för att inte dölja tashkeel */
     .ra-symbol { 
         color: #000000; 
         font-family: 'Scheherazade New', serif; 
         font-weight: normal; 
         font-size: 1.1em;
-        margin-right: 4px; /* Skapar luft till namnet */
+        margin-right: 4px; 
     }
 
     .card-header {
@@ -134,7 +132,7 @@ if not result.empty:
     row = result.iloc[0]
     original_text = str(row['text']).replace('\n', ' ')
     
-    # KNEPET: STÄDNING (Tar bort Tatweel och bindestreck)
+    # 1. STÄDNING (Tatweel och bindestreck)
     cleaned_text = original_text.replace('ـ', '').replace('-', '')
 
     # --- FORMATTERINGSLOGIK ---
@@ -160,20 +158,26 @@ if not result.empty:
         group_name = match.lastgroup
         text = match.group(0)
         
-        # Här lägger vi till &nbsp; (hårt mellanslag) före symbolen för att flytta den
         if group_name == 'saw': 
             return '&nbsp;<span class="saw-symbol">ﷺ</span>'
-        
         if group_name in ['ra_anhuma', 'ra_anha', 'ra_anhu']: 
             return '&nbsp;<span class="ra-symbol">ؓ</span>'
-            
         if group_name == 'quote': return f'<b>{text}</b>'
         if group_name == 'pink': return f'<span class="narrator-highlight">{text}</span>'
         if group_name == 'orange': return f'<span class="qal-highlight">{text}</span>'
         if group_name == 'red': return f'<span class="rasul-highlight">{text}</span>'
         return text
 
+    # Kör den huvudsakliga formateringen
     formatted_text = re.sub(master_pattern, formatter_func, cleaned_text)
+
+    # 2. EXTRA STÄDNING AV MELLANSLAG
+    # Ta bort dubbla mellanslag
+    formatted_text = re.sub(r'\s+', ' ', formatted_text)
+    # Ta bort mellanslag precis före skiljetecken (t.ex. " .")
+    formatted_text = re.sub(r'\s+([\.،,])', r'\1', formatted_text)
+    # Trimma kanterna
+    formatted_text = formatted_text.strip()
 
     # --- RENDERING ---
     st.markdown(f"""
