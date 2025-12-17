@@ -203,7 +203,7 @@ if not result.empty:
     # Akhbarani (أَخْبَرَنِي) - NY
     akhbarani = f'أ{t}خ{t}ب{t}ر{t}ن{t}ي'
     akhbarana = f'أ{t}خ{t}ب{t}ر{t}ن{t}ا'
-    an = f'عَ{t}نْ{t}'
+    an = f'عَنْ '
     # Lägg till akhbarani i listan med | (OR-operator)
     pink_words = f'{hadathana}|{hadathani_singular}|{akhbarani}|{akhbarana}|{an}'
 
