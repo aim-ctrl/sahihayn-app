@@ -12,7 +12,6 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
-    /* --- DÖLJ STREAMLIT UI --- */
     #MainMenu { visibility: hidden !important; }
     header { visibility: hidden !important; }
     footer { visibility: hidden !important; display: none !important; }
@@ -21,7 +20,6 @@ st.markdown("""
     div[data-testid="stStatusWidget"] { display: none !important; }
     [class*="viewerBadge"] { display: none !important; }
 
-    /* --- DIN DESIGN --- */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 1rem !important;
@@ -63,9 +61,9 @@ st.markdown("""
         color: #2E8B57; /* Grön färg på citaten */
     }
 
-    /* NY KLASS: Orange färg för ordet 'Qal' */
+    /* ORANGE FÄRG: !important tvingar fram färgen även inuti <b> taggar */
     .qal-highlight {
-        color: #ff8c00; /* Dark Orange för bättre läsbarhet */
+        color: #ff8c00 !important; 
         font-weight: bold;
     }
 
@@ -88,7 +86,6 @@ st.markdown("""
         border: 1px solid #dcedc8;
     }
 
-    /* Rådata-boxen */
     details {
         margin-top: 10px;
         border-top: 1px dashed #ddd;
@@ -169,37 +166,38 @@ result = df[
 if not result.empty:
     row = result.iloc[0]
     
-    # 1. Råtext för API-toggle
     raw_api_text = str(row['text'])
-    
-    # 2. Rensa text för visning
     display_text = raw_api_text.replace('\n', '')
-    
-    # 3. HTML Escape
     safe_text = html.escape(display_text)
     
-    # 4. FIX: Kontrollera udda antal citattecken
     if safe_text.count('&quot;') % 2 != 0:
         safe_text += '&quot;'
 
-    # 5. FÄRGLÄGG "QAL" (Nytt steg)
-    # Regex-förklaring:
-    # ق           = Bokstaven Qaf
-    # [\u064B-\u065F]* = Noll eller flera diakritiska tecken (vokaler)
-    # ا           = Bokstaven Alif
-    # ...         = (samma diakritik-check igen)
-    # ل           = Bokstaven Lam
-    # Vi använder () för att fånga exakt det ord som hittades så vi inte raderar vokalerna vid ersättning.
+    # --- STEG 1: FÄRGLÄGG SPECIFIKA ORD (QAL m.fl.) ---
+    # Vi gör detta FÖRST så att span-taggarna hamnar inuti citaten sen.
     
-    qal_pattern = r'(ق[\u064B-\u065F]*ا[\u064B-\u065F]*ل)'
-    formatted_text = re.sub(qal_pattern, r'<span class="qal-highlight">\1</span>', safe_text)
+    # Tashkeel (vokaler) regex
+    t = r'[\u064B-\u065F]*' 
+
+    # Bygg ord
+    yaqul = f'ي{t}ق{t}و{t}ل{t}'
+    qalat = f'ق{t}ا{t}ل{t}ت{t}'
+    qal = f'ق{t}ا{t}ل{t}'
+
+    full_pattern = f'({yaqul}|{qalat}|{qal})'
+
+    formatted_text = re.sub(full_pattern, r'<span class="qal-highlight">\1</span>', safe_text)
+
+    # --- STEG 2: FÄRGLÄGG CITAT (FETSTIL & GRÖN) ---
+    # Detta görs SIST, vilket betyder att hela citatet omsluts av <b>.
+    # Om ordet "Qal" finns inuti, kommer HTML att se ut så här: <b>... <span class="qal">Qal</span> ...</b>
     
-    # 6. Regex för att fetmarkera citat (Grön färg via CSS)
     formatted_text = re.sub(r'&quot;(.*?)&quot;', r'&quot;<b>\1</b>&quot;', formatted_text)
     formatted_text = re.sub(r'«(.*?)»', r'«<b>\1</b>»', formatted_text)
     formatted_text = re.sub(r'“([^”]*?)”', r'“<b>\1</b>”', formatted_text)
 
-    # 7. BYGG KORTET
+    # --- RENDERA KORTET ---
+    
     card_html = f"""
 <div class="hadith-card">
     <div class="card-header">
