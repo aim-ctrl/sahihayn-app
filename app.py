@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import html
-import re  # <--- NYTT: Vi behöver denna för att hitta citattecknen
+import re
 
 # --- KONFIGURATION ---
 st.set_page_config(page_title="Hadith Viewer", page_icon="☪️", layout="centered")
@@ -49,7 +49,7 @@ st.markdown("""
     
     .arabic-text {
         font-family: 'Scheherazade New', serif;
-        font-size: 24px; /* Ökade lite för tydlighet */
+        font-size: 24px;
         line-height: 1.8;
         direction: rtl;
         text-align: right;
@@ -58,10 +58,12 @@ st.markdown("""
         width: 100%;
     }
     
-    /* Gör fetstil lite tydligare i detta teckensnitt */
+    /* --- STYLING FÖR CITAT --- */
+    /* Här bestämmer du hur citaten ska se ut */
     .arabic-text b {
-        font-weight: 700;
-        color: #2E8B57;
+        font-weight: 700;       /* Fetstil */
+        color: #2E8B57;         /* Grön färg (samma som ramen) för att synas tydligt */
+        background-color: #f9f9f9; /* Valfritt: En mycket svag bakgrundsfärg */
     }
 
     .card-header {
@@ -141,14 +143,21 @@ if not result.empty:
     # 1. Hämta texten och rensa rader
     raw_text = str(row['text']).replace('\n', ' ')
     
-    # 2. Säkra texten för HTML (så vi inte kör skadlig kod)
+    # 2. Säkra texten för HTML. 
+    # Detta omvandlar " till &quot; vilket var problemet förut.
     safe_text = html.escape(raw_text)
     
-    # 3. FIXEN: Använd Regex för att göra text inom "..." fet
-    # Mönstret: " (fånga allt som inte är citationstecken) "
-    # Ersätt med: " <b> det vi fångade </b> "
-    formatted_text = re.sub(r'"([^"]*)"', r'"<b>\1</b>"', safe_text)
+    # 3. KORRIGERAD LOGIK:
+    # Vi söker efter &quot; (som är ") ELLER « » (vanligt i arabiska).
     
+    # A. Hantera vanliga citattecken som blivit escapade (&quot;)
+    # Vi sätter <b> runt innehållet, men låter citattecknen vara utanför fetstilen
+    formatted_text = re.sub(r'&quot;(.*?)&quot;', r'&quot;<b>\1</b>&quot;', safe_text)
+    
+    # B. Hantera arabiska citattecken («...» och “...”) om de finns
+    formatted_text = re.sub(r'«(.*?)»', r'«<b>\1</b>»', formatted_text)
+    formatted_text = re.sub(r'“([^”]*?)”', r'“<b>\1</b>”', formatted_text)
+
     card_html = f"""
     <div class="hadith-card">
         <div class="card-header">
