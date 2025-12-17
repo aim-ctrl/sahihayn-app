@@ -11,14 +11,28 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
+    /* --- DÖLJER STREAMLIT UI-ELEMENT --- */
+    
+    /* Döljer hamburgermenyn (tre punkter uppe till höger) */
+    #MainMenu {
+        visibility: hidden;
+    }
+    
+    /* Döljer färgade linjen högst upp */
     header {
         visibility: hidden;
     }
     
-    footer { visibility: hidden; } 
+    /* Döljer "Made with Streamlit" footer och GitHub-länkar längst ner */
+    footer {
+        visibility: hidden;
+        display: none !important;
+    }
     
+    /* --- DIN EGNA DESIGN --- */
+
     .block-container {
-        padding-top: 1rem !important; /* Standard är ofta runt 6rem */
+        padding-top: 1rem !important;
         padding-bottom: 1rem !important;
     }
 
@@ -102,9 +116,6 @@ with st.spinner("Laddar bibliotek..."):
     df = get_dataset()
     
 # --- ANVÄNDARGRÄNSSNITT ---
-
-# Här kan du använda kolumner igen om du vill ha dem bredvid varandra, 
-# men just nu ligger de staplade enligt din senaste kod.
 
 selected_book = st.radio(
     "Välj bok",
