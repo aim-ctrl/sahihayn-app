@@ -195,13 +195,16 @@ if not result.empty:
     # OBS: Sortera längst först för säkerhet
     orange_words = f'{faqal}|{yaqul}|{qalat}|{qal}'
 
-    # 3. ROSA GRUPP (Hadathana-familjen)
-    # Hadathana (حَدَّثَنَا)
+    # 3. ROSA GRUPP (Hadathana-familjen + Akhbarani)
+    # Hadathana (حَدَّثَنَا)
     hadathana = f'ح{t}د{t}ث{t}ن{t}ا'
-    # Hadathani (حَدَّثَنِي)
-    hadathani = f'ح{t}د{t}ث{t}ن{t}ي'
+    # Hadathani (حَدَّثَنِي)
+    hadathani_singular = f'ح{t}د{t}ث{t}ن{t}ي'
+    # Akhbarani (أَخْبَرَنِي) - NY
+    akhbarani = f'أ{t}خ{t}ب{t}ر{t}ن{t}ي'
     
-    pink_words = f'{hadathana}|{hadathani}'
+    # Lägg till akhbarani i listan med | (OR-operator)
+    pink_words = f'{hadathana}|{hadathani_singular}|{akhbarani}'
 
     # 4. CITAT GRUPP
     quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
