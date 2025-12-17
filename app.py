@@ -187,11 +187,11 @@ if not result.empty:
     t = r'[\u064B-\u065F]*' 
 
     # 2. ORANGE GRUPP (Qal-familjen)
-    faqal = f'ف{t}ق{t}ا{t}ل{t}'
-    faqalat = f'ف{t}ق{t}ا{t}ل{t}ت{t}'
-    yaqul = f'ي{t}ق{t}و{t}ل{t}'
-    qalat = f'ق{t}ا{t}ل{t}ت{t}'
-    qal = f'ق{t}ا{t}ل{t}'
+    faqal = f'ف{t}ق{t}ا{t}ل{t} '
+    faqalat = f'ف{t}ق{t}ا{t}ل{t}ت{t} '
+    yaqul = f'ي{t}ق{t}و{t}ل{t} '
+    qalat = f'ق{t}ا{t}ل{t}ت{t} '
+    qal = f'ق{t}ا{t}ل{t} '
     
     # OBS: Sortera längst först för säkerhet
     orange_words = f'{faqal}|{faqalat}|{yaqul}|{qalat}|{qal}'
