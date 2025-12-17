@@ -61,9 +61,9 @@ st.markdown("""
         color: #2E8B57; /* Grön färg på citaten */
     }
 
-    /* ORANGE FÄRG: !important tvingar fram färgen även inuti <b> taggar */
+    /* ORANGE FÄRG */
     .qal-highlight {
-        color: #ff8c00 !important; 
+        color: #ff8c00; 
         font-weight: bold;
     }
 
@@ -173,31 +173,60 @@ if not result.empty:
     if safe_text.count('&quot;') % 2 != 0:
         safe_text += '&quot;'
 
-    # --- STEG 1: FÄRGLÄGG SPECIFIKA ORD (QAL m.fl.) ---
-    # Vi gör detta FÖRST så att span-taggarna hamnar inuti citaten sen.
+    # --- NY SMART FORMATTERINGSLOGIK ---
     
-    # Tashkeel (vokaler) regex
+    # 1. Definiera Tashkeel (vokaler)
     t = r'[\u064B-\u065F]*' 
 
-    # Bygg ord
+    # 2. Definiera orden
+    # Faqal (فَقَالَ)
+    faqal = f'ف{t}ق{t}ا{t}ل{t}'
+    # Yaqul (يَقُولُ)
     yaqul = f'ي{t}ق{t}و{t}ل{t}'
+    # Qalat (قَالَتْ)
     qalat = f'ق{t}ا{t}ل{t}ت{t}'
+    # Qal (قَالَ)
     qal = f'ق{t}ا{t}ل{t}'
 
-    full_pattern = f'({yaqul}|{qalat}|{qal})'
-
-    formatted_text = re.sub(full_pattern, r'<span class="qal-highlight">\1</span>', safe_text)
-
-    # --- STEG 2: FÄRGLÄGG CITAT (FETSTIL & GRÖN) ---
-    # Detta görs SIST, vilket betyder att hela citatet omsluts av <b>.
-    # Om ordet "Qal" finns inuti, kommer HTML att se ut så här: <b>... <span class="qal">Qal</span> ...</b>
+    # Sortera dem: Längsta orden först! (Faqal/Qalat före Qal)
+    words_pattern = f'({faqal}|{yaqul}|{qalat}|{qal})'
     
-    formatted_text = re.sub(r'&quot;(.*?)&quot;', r'&quot;<b>\1</b>&quot;', formatted_text)
-    formatted_text = re.sub(r'«(.*?)»', r'«<b>\1</b>»', formatted_text)
-    formatted_text = re.sub(r'“([^”]*?)”', r'“<b>\1</b>”', formatted_text)
-
-    # --- RENDERA KORTET ---
+    # 3. Definiera Citat (dessa ska ha prio)
+    # Matchar: &quot;...&quot; ELLER «...» ELLER “...”
+    quotes_pattern = r'(&quot;.*?&quot;|«.*?»|“.*?”)'
     
+    # 4. Kombinerat mönster: Leta efter Citat FÖRST, sen Ord
+    master_pattern = f'{quotes_pattern}|{words_pattern}'
+
+    # 5. Ersättningsfunktion
+    def formatter_func(match):
+        text = match.group(0)
+        
+        # A. Om det är ett citat (börjar med något av citattecknen)
+        if text.startswith('&quot;') or text.startswith('«') or text.startswith('“'):
+            # Här formatterar vi citatet (Grönt/Fetstilt).
+            # Eftersom Regexen "konsumerar" hela citatet här, kommer ingen sökning
+            # efter "qal" att ske inuti denna sträng.
+            if text.startswith('&quot;'):
+                inner = text[6:-6] # Skala av &quot;
+                return f'&quot;<b>{inner}</b>&quot;'
+            elif text.startswith('«'):
+                inner = text[1:-1]
+                return f'«<b>{inner}</b>»'
+            elif text.startswith('“'):
+                inner = text[1:-1]
+                return f'“<b>{inner}</b>”'
+            return text
+            
+        # B. Om det inte är ett citat, då måste det vara ett av våra ord (Faqal/Qal...)
+        else:
+            return f'<span class="qal-highlight">{text}</span>'
+
+    # Kör sök och ersätt en gång
+    formatted_text = re.sub(master_pattern, formatter_func, safe_text)
+
+    # --- SLUT PÅ FORMATTERING ---
+
     card_html = f"""
 <div class="hadith-card">
     <div class="card-header">
