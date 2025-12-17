@@ -94,6 +94,7 @@ st.markdown("""
         cursor: pointer;
         font-weight: bold;
         margin-bottom: 5px;
+        direction: rtl
     }
     .raw-code-box {
         background-color: #f8f9fa;
@@ -167,7 +168,7 @@ if not result.empty:
     raw_api_text = str(row['text'])
     
     # 2. Rensa text för visning
-    display_text = raw_api_text.replace('\n', ' ')
+    display_text = raw_api_text.replace('\n', '')
     
     # 3. HTML Escape (Gör om " till &quot;)
     safe_text = html.escape(display_text)
@@ -191,7 +192,7 @@ if not result.empty:
     </div>
     <div class="arabic-text">{formatted_text}</div>
     <details>
-        <summary>Visa rådata (API)</summary>
+        <summary>Original</summary>
         <div class="raw-code-box">{html.escape(raw_api_text)}</div>
     </details>
 </div>
