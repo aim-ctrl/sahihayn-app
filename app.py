@@ -94,7 +94,7 @@ def get_dataset():
     full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
     return full_df
 
-with st.spinner("Laddar..."):
+with st.spinner("Laddar bibliotek..."):
     df = get_dataset()
 
 # --- ANVÄNDARGRÄNSSNITT ---
@@ -116,13 +116,14 @@ if not result.empty:
     t = r'[\u064B-\u065F]*' # Tashkeel
     s = r'\s*'             # Mellanslag
     y = f'[يى]{t}'        # Yaa eller Alif Maqsura
-    b = r'-?'              # Valfritt bindestreck
+    # Tatweel (ـ) eller bindestreck (-)
+    dash = r'[-ـ]*' 
 
-    # Uppdaterade mönster med valfria bindestreck runt om
-    ra_base = f'{b}ر{t}ض{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ن{t}ه{t}'
-    pattern_ra_anhuma = f'{ra_base}م{t}ا{t}{b}'
-    pattern_ra_anha   = f'{ra_base}ا{t}{b}'
-    pattern_ra_anhu   = f'{ra_base}{b}'
+    # Uppdaterade mönster med Tatweel-stöd
+    ra_base = f'{dash}ر{t}ض{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ن{t}ه{t}'
+    pattern_ra_anhuma = f'{ra_base}م{t}ا{t}{dash}'
+    pattern_ra_anha   = f'{ra_base}ا{t}{dash}'
+    pattern_ra_anhu   = f'{ra_base}{dash}'
 
     sallallah = f'ص{t}ل{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ل{t}ي{t}ه{t}{s}و{t}س{t}ل{t}م{t}'
     rasul_allah = f'ر{t}س{t}و{t}ل{t}{s}ا{t}ل{t}ل{t}ه{t}'
