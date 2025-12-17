@@ -46,7 +46,7 @@ st.markdown("""
         line-height: 1.8;
         direction: rtl;
         text-align: right;
-        color: #000;
+        color: #1a1a1a;
         margin-top: 20px;
         width: 100%;
     }
@@ -68,10 +68,27 @@ st.markdown("""
         border-radius: 8px; font-size: 0.9rem; font-weight: 700;
         border: 1px solid #dcedc8;
     }
+
+    /* FIX FÖR ORIGINALTEXTENS SYNLIGHET */
     .raw-code-box {
-        background-color: #f8f9fa; border: 1px solid #eee; padding: 10px;
-        border-radius: 5px; font-family: monospace; white-space: pre-wrap; 
-        direction: rtl; text-align: right; font-size: 12px; margin-top: 10px;
+        background-color: #262730; /* Mörk bakgrund */
+        color: #ffffff;           /* Vit text */
+        border: 1px solid #444;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: 'Scheherazade New', serif;
+        white-space: pre-wrap; 
+        direction: rtl;
+        text-align: right;
+        font-size: 18px;
+        margin-top: 10px;
+    }
+    
+    summary {
+        color: #2E8B57;
+        font-weight: bold;
+        cursor: pointer;
+        padding: 5px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -94,7 +111,7 @@ def get_dataset():
     full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
     return full_df
 
-with st.spinner("Laddar bibliotek..."):
+with st.spinner("Laddar..."):
     df = get_dataset()
 
 # --- ANVÄNDARGRÄNSSNITT ---
@@ -107,18 +124,15 @@ result = df[(df['book_name'] == selected_book) & (df['hadithnumber'] == current_
 
 if not result.empty:
     row = result.iloc[0]
-    raw_api_text = str(row['text'])
-    safe_text = html.escape(raw_api_text.replace('\n', ''))
+    raw_text = str(row['text']).replace('\n', ' ')
     
-    if safe_text.count('&quot;') % 2 != 0: safe_text += '&quot;'
-
     # --- FORMATTERINGSLOGIK ---
-    # t_all inkluderar nu även Tatweel (ـ) och bindestreck (-) tillsammans med vokaler
+    # t_all: Vokaler + Tatweel (ـ) + Bindestreck
     t_all = r'[\u064B-\u065F\u0640-]*' 
     s = r'\s*'             
     y = f'[يى]{t_all}'        
 
-    # Mönster för Radi Allahu Anhu/Anha/Anhuma
+    # Mönster
     ra_base = f'{t_all}ر{t_all}ض{t_all}{y}{s}ا{t_all}ل{t_all}ل{t_all}ه{t_all}{s}ع{t_all}ن{t_all}ه{t_all}'
     pattern_ra_anhuma = f'{ra_base}م{t_all}ا{t_all}'
     pattern_ra_anha   = f'{ra_base}ا{t_all}'
@@ -129,7 +143,7 @@ if not result.empty:
 
     orange_words = f'ف{t_all}ق{t_all}ا{t_all}ل{t_all} |ف{t_all}ق{t_all}ا{t_all}ل{t_all}ت{t_all} |ي{t_all}ق{t_all}و{t_all}ل{t_all} |ق{t_all}ا{t_all}ت{t_all} |ق{t_all}ا{t_all}ل{t_all} '
     pink_words = f'ح{t_all}د{t_all}ث{t_all}ن{t_all}ا|ح{t_all}د{t_all}ث{t_all}ن{t_all}ي|أ{t_all}خ{t_all}ب{t_all}ر{t_all}ن{t_all}ي|أ{t_all}خ{t_all}ب{t_all}ر{t_all}ن{t_all}ا|عَن{t_all} |س{t_all}م{t_all}ع{t_all}ت{t_all}ُ?'
-    quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
+    quote_str = r'".*?"|«.*?»|“.*?”' # Enklare citat-matchning före escape
     
     master_pattern = f'(?P<quote>{quote_str})|(?P<saw>{sallallah})|(?P<ra_anhuma>{pattern_ra_anhuma})|(?P<ra_anha>{pattern_ra_anha})|(?P<ra_anhu>{pattern_ra_anhu})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
 
@@ -140,14 +154,14 @@ if not result.empty:
         if group_name == 'saw': return '<span class="saw-symbol">ﷺ</span>'
         if group_name in ['ra_anhuma', 'ra_anha', 'ra_anhu']: return '<span class="ra-symbol">ؓ</span>'
         if group_name == 'quote':
-            if text.startswith('&quot;'): return f'&quot;<b>{text[6:-6]}</b>&quot;'
-            return f'{text[0]}<b>{text[1:-1]}</b>{text[-1]}'
+            return f'<b>{text}</b>'
         if group_name == 'pink': return f'<span class="narrator-highlight">{text}</span>'
         if group_name == 'orange': return f'<span class="qal-highlight">{text}</span>'
         if group_name == 'red': return f'<span class="rasul-highlight">{text}</span>'
         return text
 
-    formatted_text = re.sub(master_pattern, formatter_func, safe_text)
+    # Formatera råtexten först, escapea sedan i renderingen via st.markdown
+    formatted_text = re.sub(master_pattern, formatter_func, raw_text)
 
     # --- RENDERING ---
     st.markdown(f"""
@@ -158,10 +172,10 @@ if not result.empty:
         </div>
         <div class="arabic-text">{formatted_text}</div>
         <details>
-            <summary style="font-size:12px; color:#999; margin-top:20px; cursor:pointer;">Visa originaltext</summary>
-            <div class="raw-code-box">{html.escape(raw_api_text)}</div>
+            <summary>Visa originaltext (rådata)</summary>
+            <div class="raw-code-box">{raw_text}</div>
         </details>
     </div>
     """, unsafe_allow_html=True)
 else:
-    st.info(f"Hittade ingen hadith med nummer {hadith_id} i {selected_book}.")
+    st.info(f"Hittade ingen hadith med nummer {hadith_id}.")
