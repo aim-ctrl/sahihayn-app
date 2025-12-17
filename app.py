@@ -63,6 +63,12 @@ st.markdown("""
         color: #2E8B57; /* Grön färg på citaten */
     }
 
+    /* NY KLASS: Orange färg för ordet 'Qal' */
+    .qal-highlight {
+        color: #ff8c00; /* Dark Orange för bättre läsbarhet */
+        font-weight: bold;
+    }
+
     .card-header {
         display: flex; 
         justify-content: space-between; 
@@ -163,26 +169,37 @@ result = df[
 if not result.empty:
     row = result.iloc[0]
     
-    # 1. Råtext för API-toggle (Vi rör inte denna, så man ser originalfelet om man vill)
+    # 1. Råtext för API-toggle
     raw_api_text = str(row['text'])
     
     # 2. Rensa text för visning
     display_text = raw_api_text.replace('\n', '')
     
-    # 3. HTML Escape (Gör om " till &quot;)
+    # 3. HTML Escape
     safe_text = html.escape(display_text)
     
     # 4. FIX: Kontrollera udda antal citattecken
-    # Om antalet &quot; är udda (t.ex. 1, 3, 5), lägg till ett på slutet.
     if safe_text.count('&quot;') % 2 != 0:
         safe_text += '&quot;'
+
+    # 5. FÄRGLÄGG "QAL" (Nytt steg)
+    # Regex-förklaring:
+    # ق           = Bokstaven Qaf
+    # [\u064B-\u065F]* = Noll eller flera diakritiska tecken (vokaler)
+    # ا           = Bokstaven Alif
+    # ...         = (samma diakritik-check igen)
+    # ل           = Bokstaven Lam
+    # Vi använder () för att fånga exakt det ord som hittades så vi inte raderar vokalerna vid ersättning.
     
-    # 5. Regex för att fetmarkera citat
-    formatted_text = re.sub(r'&quot;(.*?)&quot;', r'&quot;<b>\1</b>&quot;', safe_text)
+    qal_pattern = r'(ق[\u064B-\u065F]*ا[\u064B-\u065F]*ل)'
+    formatted_text = re.sub(qal_pattern, r'<span class="qal-highlight">\1</span>', safe_text)
+    
+    # 6. Regex för att fetmarkera citat (Grön färg via CSS)
+    formatted_text = re.sub(r'&quot;(.*?)&quot;', r'&quot;<b>\1</b>&quot;', formatted_text)
     formatted_text = re.sub(r'«(.*?)»', r'«<b>\1</b>»', formatted_text)
     formatted_text = re.sub(r'“([^”]*?)”', r'“<b>\1</b>”', formatted_text)
 
-    # 6. BYGG KORTET (Utan indrag!)
+    # 7. BYGG KORTET
     card_html = f"""
 <div class="hadith-card">
     <div class="card-header">
