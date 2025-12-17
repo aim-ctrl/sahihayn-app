@@ -205,8 +205,9 @@ if not result.empty:
     akhbarani = f'أ{t}خ{t}ب{t}ر{t}ن{t}ي'
     akhbarana = f'أ{t}خ{t}ب{t}ر{t}ن{t}ا'
     an = f'عَن{t} '
+    samitu = f'س{t}م{t}ع{t}ت{t}ُ '
     # Lägg till akhbarani i listan med | (OR-operator)
-    pink_words = f'{hadathana}|{hadathani_singular}|{akhbarani}|{akhbarana}|{an}'
+    pink_words = f'{hadathana}|{hadathani_singular}|{akhbarani}|{akhbarana}|{an}|{samitu}'
 
     # 4. CITAT GRUPP
     quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
