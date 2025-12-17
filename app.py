@@ -61,9 +61,17 @@ st.markdown("""
         color: #2E8B57; /* Grön färg på citaten */
     }
 
-    /* ORANGE FÄRG */
+    /* FÄRGER */
+    
+    /* Qal-gruppen: Orange */
     .qal-highlight {
         color: #ff8c00; 
+        font-weight: bold;
+    }
+    
+    /* Hadathana-gruppen: Ljusrosa (Men tillräckligt mörk för att läsas) */
+    .narrator-highlight {
+        color: #ec407a; /* En tydlig rosa nyans */
         font-weight: bold;
     }
 
@@ -173,42 +181,47 @@ if not result.empty:
     if safe_text.count('&quot;') % 2 != 0:
         safe_text += '&quot;'
 
-    # --- NY SMART FORMATTERINGSLOGIK ---
+    # --- FORMATTERINGSLOGIK ---
     
     # 1. Definiera Tashkeel (vokaler)
     t = r'[\u064B-\u065F]*' 
 
-    # 2. Definiera orden
-    # Faqal (فَقَالَ)
+    # 2. ORANGE GRUPP (Qal-familjen)
     faqal = f'ف{t}ق{t}ا{t}ل{t}'
-    # Yaqul (يَقُولُ)
     yaqul = f'ي{t}ق{t}و{t}ل{t}'
-    # Qalat (قَالَتْ)
     qalat = f'ق{t}ا{t}ل{t}ت{t}'
-    # Qal (قَالَ)
     qal = f'ق{t}ا{t}ل{t}'
-
-    # Sortera dem: Längsta orden först! (Faqal/Qalat före Qal)
-    words_pattern = f'({faqal}|{yaqul}|{qalat}|{qal})'
     
-    # 3. Definiera Citat (dessa ska ha prio)
-    # Matchar: &quot;...&quot; ELLER «...» ELLER “...”
-    quotes_pattern = r'(&quot;.*?&quot;|«.*?»|“.*?”)'
-    
-    # 4. Kombinerat mönster: Leta efter Citat FÖRST, sen Ord
-    master_pattern = f'{quotes_pattern}|{words_pattern}'
+    # OBS: Sortera längst först för säkerhet
+    orange_words = f'{faqal}|{yaqul}|{qalat}|{qal}'
 
-    # 5. Ersättningsfunktion
+    # 3. ROSA GRUPP (Hadathana-familjen)
+    # Hadathana (حَدَّثَنَا)
+    hadathana = f'ح{t}د{t}ث{t}ن{t}ا'
+    # Hadathani (حَدَّثَنِي)
+    hadathani = f'ح{t}د{t}ث{t}ن{t}ي'
+    
+    pink_words = f'{hadathana}|{hadathani}'
+
+    # 4. CITAT GRUPP
+    quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
+    
+    # 5. BYGG MASTER PATTERN MED NAMNGIVNA GRUPPER
+    # Syntaxen (?P<namn>mönster) låter oss identifiera VAD som träffades.
+    master_pattern = f'(?P<quote>{quote_str})|(?P<pink>{pink_words})|(?P<orange>{orange_words})'
+
+    # 6. ERSÄTTNINGSFUNKTION
     def formatter_func(match):
         text = match.group(0)
         
-        # A. Om det är ett citat (börjar med något av citattecknen)
-        if text.startswith('&quot;') or text.startswith('«') or text.startswith('“'):
-            # Här formatterar vi citatet (Grönt/Fetstilt).
-            # Eftersom Regexen "konsumerar" hela citatet här, kommer ingen sökning
-            # efter "qal" att ske inuti denna sträng.
+        # Kolla vilken grupp som gav träff via match.lastgroup
+        group_name = match.lastgroup
+        
+        if group_name == 'quote':
+            # Citat: Fetstilt & Grönt (via CSS för <b>)
+            # Vi måste ta bort citattecknen temporärt för att sätta <b> inuti
             if text.startswith('&quot;'):
-                inner = text[6:-6] # Skala av &quot;
+                inner = text[6:-6]
                 return f'&quot;<b>{inner}</b>&quot;'
             elif text.startswith('«'):
                 inner = text[1:-1]
@@ -218,11 +231,17 @@ if not result.empty:
                 return f'“<b>{inner}</b>”'
             return text
             
-        # B. Om det inte är ett citat, då måste det vara ett av våra ord (Faqal/Qal...)
-        else:
+        elif group_name == 'pink':
+            # Hadathana: Rosa
+            return f'<span class="narrator-highlight">{text}</span>'
+            
+        elif group_name == 'orange':
+            # Qal: Orange
             return f'<span class="qal-highlight">{text}</span>'
+            
+        return text
 
-    # Kör sök och ersätt en gång
+    # Kör sök och ersätt
     formatted_text = re.sub(master_pattern, formatter_func, safe_text)
 
     # --- SLUT PÅ FORMATTERING ---
