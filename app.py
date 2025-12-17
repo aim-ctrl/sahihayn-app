@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import html
+import re  # <--- NYTT: Vi behöver denna för att hitta citattecknen
 
 # --- KONFIGURATION ---
 st.set_page_config(page_title="Hadith Viewer", page_icon="☪️", layout="centered")
@@ -11,33 +12,17 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
-    /* --- TOTAL DÖLJNING AV STREAMLIT UI --- */
-    
+    /* --- DÖLJ STREAMLIT UI --- */
     #MainMenu { visibility: hidden !important; }
     header { visibility: hidden !important; }
     footer { visibility: hidden !important; display: none !important; }
-
-    /* --- "KRYPSKYTTE" MOT LÄNKEN --- */
     
-    /* 1. Detta letar efter alla länkar (a-taggar) som innehåller texten 'streamlit.io/cloud' */
-    a[href*="streamlit.io/cloud"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
+    /* Döljer Streamlit-länkar och badges */
+    a[href*="streamlit.io/cloud"] { display: none !important; }
+    div[data-testid="stStatusWidget"] { display: none !important; }
+    [class*="viewerBadge"] { display: none !important; }
 
-    /* 2. Döljer behållaren som länken ligger i (Viewer Badge) */
-    div[data-testid="stStatusWidget"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    
-    /* 3. Ett bredare nät för element med 'viewer' i namnet */
-    [class*="viewerBadge"] {
-        display: none !important;
-    }
-
-    /* --- DIN EGNA DESIGN --- */
-
+    /* --- DIN DESIGN --- */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 1rem !important;
@@ -64,13 +49,22 @@ st.markdown("""
     
     .arabic-text {
         font-family: 'Scheherazade New', serif;
-        font-size: 22px;
-        line-height: 1.6;
+        font-size: 24px; /* Ökade lite för tydlighet */
+        line-height: 1.8;
         direction: rtl;
         text-align: right;
         color: #000;
         margin-top: 20px;
         width: 100%;
+    }
+    
+    /* Gör fetstil lite tydligare i detta teckensnitt */
+    .arabic-text b {
+        color: #000000;
+        font-weight: 700;
+        /* Valfritt: Vill du ha en annan färg på citaten? 
+           Avkommentera raden nedan: */
+        /* color: #2E8B57; */
     }
 
     .card-header {
@@ -146,7 +140,17 @@ result = df[
 
 if not result.empty:
     row = result.iloc[0]
-    arabic_text = html.escape(str(row['text'])).replace('\n', ' ')
+    
+    # 1. Hämta texten och rensa rader
+    raw_text = str(row['text']).replace('\n', ' ')
+    
+    # 2. Säkra texten för HTML (så vi inte kör skadlig kod)
+    safe_text = html.escape(raw_text)
+    
+    # 3. FIXEN: Använd Regex för att göra text inom "..." fet
+    # Mönstret: " (fånga allt som inte är citationstecken) "
+    # Ersätt med: " <b> det vi fångade </b> "
+    formatted_text = re.sub(r'"([^"]*)"', r'"<b>\1</b>"', safe_text)
     
     card_html = f"""
     <div class="hadith-card">
@@ -154,7 +158,7 @@ if not result.empty:
             <span class="meta-tag">📖 {row['book_name']}</span>
             <span class="meta-tag"># {row['hadithnumber']}</span>
         </div>
-        <div class="arabic-text">{arabic_text}</div>
+        <div class="arabic-text">{formatted_text}</div>
     </div>
     """
     st.markdown(card_html, unsafe_allow_html=True)
