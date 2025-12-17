@@ -163,7 +163,7 @@ result = df[
 if not result.empty:
     row = result.iloc[0]
     
-    # 1. Råtext för API-toggle
+    # 1. Råtext för API-toggle (Vi rör inte denna, så man ser originalfelet om man vill)
     raw_api_text = str(row['text'])
     
     # 2. Rensa text för visning
@@ -172,12 +172,17 @@ if not result.empty:
     # 3. HTML Escape (Gör om " till &quot;)
     safe_text = html.escape(display_text)
     
-    # 4. Regex för att fetmarkera citat
+    # 4. FIX: Kontrollera udda antal citattecken
+    # Om antalet &quot; är udda (t.ex. 1, 3, 5), lägg till ett på slutet.
+    if safe_text.count('&quot;') % 2 != 0:
+        safe_text += '&quot;'
+    
+    # 5. Regex för att fetmarkera citat
     formatted_text = re.sub(r'&quot;(.*?)&quot;', r'&quot;<b>\1</b>&quot;', safe_text)
     formatted_text = re.sub(r'«(.*?)»', r'«<b>\1</b>»', formatted_text)
     formatted_text = re.sub(r'“([^”]*?)”', r'“<b>\1</b>”', formatted_text)
 
-    # 5. BYGG KORTET (OBS! Inga indrag i HTML-strängen här!)
+    # 6. BYGG KORTET (Utan indrag!)
     card_html = f"""
 <div class="hadith-card">
     <div class="card-header">
