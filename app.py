@@ -203,9 +203,9 @@ if not result.empty:
     # Akhbarani (أَخْبَرَنِي) - NY
     akhbarani = f'أ{t}خ{t}ب{t}ر{t}ن{t}ي'
     akhbarana = f'أ{t}خ{t}ب{t}ر{t}ن{t}ا'
-    
+    an = f'عَ{t}نْ'
     # Lägg till akhbarani i listan med | (OR-operator)
-    pink_words = f'{hadathana}|{hadathani_singular}|{akhbarani}|{akhbarana}'
+    pink_words = f'{hadathana}|{hadathani_singular}|{akhbarani}|{akhbarana}|{an}'
 
     # 4. CITAT GRUPP
     quote_str = r'&quot;.*?&quot;|«.*?»|“.*?”'
