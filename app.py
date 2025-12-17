@@ -62,9 +62,7 @@ st.markdown("""
     .arabic-text b {
         color: #000000;
         font-weight: 700;
-        /* Valfritt: Vill du ha en annan färg på citaten? 
-           Avkommentera raden nedan: */
-        /* color: #2E8B57; */
+        color: #2E8B57;
     }
 
     .card-header {
