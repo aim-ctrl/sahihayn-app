@@ -11,36 +11,37 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
     
-    /* --- DEN STORA STÄDNINGEN (Tar bort knappen i din bild) --- */
+    /* --- TOTAL DÖLJNING AV STREAMLIT UI --- */
     
-    /* 1. Detta tar bort hela verktygsfältet där "Manage app"-knappen bor */
-    [data-testid="stToolbar"] {
-        visibility: hidden !important;
+    /* 1. Tar bort Main Menu och Header */
+    #MainMenu { visibility: hidden !important; }
+    header { visibility: hidden !important; }
+    
+    /* 2. Tar bort standard-footern */
+    footer { 
+        visibility: hidden !important; 
         display: none !important;
+        height: 0 !important;
+    }
+    
+    /* 3. AGGRESSIVT: Tar bort Viewer Badge (Hosted with Streamlit) */
+    /* Vi tar bort 'div' och använder bara klass-wildcard */
+    [class*="viewerBadge"] {
+        display: none !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        pointer-events: none !important;
     }
 
-    /* 2. Detta tar bort hela topp-headern (om något skulle ligga kvar där) */
-    [data-testid="stHeader"] {
-        visibility: hidden !important;
+    /* 4. Siktar specifikt på länkar som går till Streamlit (själva knappen) */
+    a[href*="streamlit.io"] {
         display: none !important;
     }
     
-    /* 3. Döljer den färgade linjen högst upp (decoration) */
-    [data-testid="stDecoration"] {
-        visibility: hidden !important;
+    /* 5. Tar bort profil-ikonen bredvid texten om den ligger separat */
+    img[alt="Profile picture"] {
         display: none !important;
-    }
-
-    /* 4. Döljer gamla menyer och footers för säkerhets skull */
-    #MainMenu {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    
-    footer {
-        visibility: hidden !important;
-        display: none !important;
-        height: 0px !important;
     }
 
     /* --- DIN EGNA DESIGN --- */
@@ -50,7 +51,6 @@ st.markdown("""
         padding-bottom: 1rem !important;
     }
 
-    /* Centrera texten i nummer-inputen */
     div[data-testid="stNumberInput"] input {
         text-align: center;
         font-size: 18px;
@@ -58,7 +58,6 @@ st.markdown("""
         color: #2E8B57;
     }
 
-    /* Kortet */
     .hadith-card {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
@@ -120,9 +119,7 @@ def get_dataset():
     df_bukhari = load_book("bukhari")
     df_muslim = load_book("muslim")
     full_df = pd.concat([df_bukhari, df_muslim], ignore_index=True)
-    
     full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
-    
     return full_df
 
 with st.spinner("Laddar bibliotek..."):
