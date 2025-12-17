@@ -132,14 +132,18 @@ if not result.empty:
     row = result.iloc[0]
     original_text = str(row['text']).replace('\n', ' ')
     
-    # --- 1. STÄDNING (Tatweel, bindestreck och trasiga tecken) ---
-    # Vi tar bort trasiga tecken (), tatweel (ـ) och bindestreck (-)
-    cleaned_text = original_text.replace('', '').replace('ـ', '').replace('-', '')
+    # --- NY STÄDNINGSPROCESS ---
+    # 1. Ta bort den specifika Replacement Character (\ufffd)
+    cleaned_text = original_text.replace('\ufffd', '')
     
-    # Ta även bort osynliga kontrolltecken om de finns
-    cleaned_text = "".join(ch for ch in cleaned_text if ord(ch) > 31 or ch == '\t')
+    # 2. Ta bort Tatweel och bindestreck
+    cleaned_text = cleaned_text.replace('ـ', '').replace('-', '')
+    
+    # 3. Regex för att rensa ALLA trasiga/osynliga Unicode-tecken (non-printable)
+    # Detta tar bort allt som inte är vanliga bokstäver, siffror eller arabiska tecken
+    cleaned_text = re.sub(r'[^\u0020-\u007E\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]', '', cleaned_text)
 
-    # --- 2. FORMATTERINGSLOGIK ---
+    # --- FORMATTERINGSLOGIK ---
     t = r'[\u064B-\u065F]*' 
     s = r'\s*'             
     y = f'[يى]{t}'        
@@ -174,7 +178,7 @@ if not result.empty:
 
     formatted_text = re.sub(master_pattern, formatter_func, cleaned_text)
 
-    # --- 3. EXTRA STÄDNING AV MELLANSLAG ---
+    # --- SISTA STÄDNING ---
     formatted_text = re.sub(r'\s+', ' ', formatted_text)
     formatted_text = re.sub(r'\s+([\.،,])', r'\1', formatted_text)
     formatted_text = formatted_text.strip()
