@@ -132,10 +132,14 @@ if not result.empty:
     row = result.iloc[0]
     original_text = str(row['text']).replace('\n', ' ')
     
-    # 1. STÄDNING (Tatweel och bindestreck)
-    cleaned_text = original_text.replace('ـ', '').replace('-', '')
+    # --- 1. STÄDNING (Tatweel, bindestreck och trasiga tecken) ---
+    # Vi tar bort trasiga tecken (), tatweel (ـ) och bindestreck (-)
+    cleaned_text = original_text.replace('', '').replace('ـ', '').replace('-', '')
+    
+    # Ta även bort osynliga kontrolltecken om de finns
+    cleaned_text = "".join(ch for ch in cleaned_text if ord(ch) > 31 or ch == '\t')
 
-    # --- FORMATTERINGSLOGIK ---
+    # --- 2. FORMATTERINGSLOGIK ---
     t = r'[\u064B-\u065F]*' 
     s = r'\s*'             
     y = f'[يى]{t}'        
@@ -168,15 +172,11 @@ if not result.empty:
         if group_name == 'red': return f'<span class="rasul-highlight">{text}</span>'
         return text
 
-    # Kör den huvudsakliga formateringen
     formatted_text = re.sub(master_pattern, formatter_func, cleaned_text)
 
-    # 2. EXTRA STÄDNING AV MELLANSLAG
-    # Ta bort dubbla mellanslag
+    # --- 3. EXTRA STÄDNING AV MELLANSLAG ---
     formatted_text = re.sub(r'\s+', ' ', formatted_text)
-    # Ta bort mellanslag precis före skiljetecken (t.ex. " .")
     formatted_text = re.sub(r'\s+([\.،,])', r'\1', formatted_text)
-    # Trimma kanterna
     formatted_text = formatted_text.strip()
 
     # --- RENDERING ---
