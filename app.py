@@ -27,11 +27,16 @@ ORANGE_WORDS = f'ف{TASHKEEL}ق{TASHKEEL}ا{TASHKEEL}ل{TASHKEEL} |ف{TASHKEEL}�
 PINK_WORDS = f'ح{TASHKEEL}د{TASHKEEL}ث{TASHKEEL}ن{TASHKEEL}ا|ح{TASHKEEL}د{TASHKEEL}ث{TASHKEEL}ن{TASHKEEL}ي|أ{TASHKEEL}خ{TASHKEEL}ب{TASHKEEL}ر{TASHKEEL}ن{TASHKEEL}ي|أ{TASHKEEL}خ{TASHKEEL}ب{TASHKEEL}ر{TASHKEEL}ن{TASHKEEL}ا|عَن{TASHKEEL} |س{TASHKEEL}م{TASHKEEL}ع{TASHKEEL}ت{TASHKEEL}ُ?'
 QUOTE_STR = r'".*?"|«.*?»|“.*?”'
 
+# NYTT: Mönster för måsvingar (hanterar allt inuti {})
+CURLY_BRACES = r'\{.*?\}'
+
 # 4. Det stora huvudmönstret (Kompileras en gång för prestanda)
+# Vi lägger till (?P<curly>{CURLY_BRACES}) i mönstret
 MASTER_PATTERN = re.compile(
     f'(?P<quote>{QUOTE_STR})|(?P<saw>{SALLALLAH})|(?P<ra_anhuma>{PATTERN_RA_ANHUMA})|'
     f'(?P<ra_anha>{PATTERN_RA_ANHA})|(?P<ra_anhu>{PATTERN_RA_ANHU})|'
-    f'(?P<pink>{PINK_WORDS})|(?P<orange>{ORANGE_WORDS})|(?P<red>{RASUL_ALLAH})'
+    f'(?P<pink>{PINK_WORDS})|(?P<orange>{ORANGE_WORDS})|(?P<red>{RASUL_ALLAH})|'
+    f'(?P<curly>{CURLY_BRACES})'
 )
 
 # 5. Städ-mönster
@@ -81,6 +86,9 @@ st.markdown("""
     .qal-highlight { color: #ff8c00; font-weight: bold; }
     .narrator-highlight { color: #ec407a; font-weight: bold; }
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
+    
+    /* NYTT: Klass för text inom måsvingar (Blå) */
+    .curly-highlight { color: #1E90FF; font-weight: bold; }
     
     /* Sök-highlighting */
     .search-highlight {
@@ -205,6 +213,10 @@ def apply_original_formatting(original_text):
         if group_name == 'pink': return f'<span class="narrator-highlight">{match_text}</span>'
         if group_name == 'orange': return f'<span class="qal-highlight">{match_text}</span>'
         if group_name == 'red': return f'<span class="rasul-highlight">{match_text}</span>'
+        
+        # NYTT: Hanterar blå färg för text inom måsvingar
+        if group_name == 'curly': return f'<span class="curly-highlight">{match_text}</span>'
+        
         return match_text
 
     formatted = MASTER_PATTERN.sub(formatter_func, text_to_process)
