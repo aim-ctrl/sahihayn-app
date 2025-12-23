@@ -1,18 +1,73 @@
 import streamlit as st
 import pandas as pd
 import requests
+import html
 import re
 
 # --- KONFIGURATION ---
 st.set_page_config(page_title="Hadith Viewer", page_icon="☪️", layout="centered")
 
-# --- CSS / DESIGN ---
-# (Här klistrar du in hela din <style>-block från ditt ursprungliga inlägg)
+# --- CSS / DESIGN (Exakt din originaldesign) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
-    /* ... [Resten av din CSS] ... */
-    .hadith-card { margin-bottom: 30px; } /* Lagt till lite extra marginal mellan korten */
+    
+    #MainMenu { visibility: hidden !important; }
+    header { visibility: hidden !important; }
+    footer { visibility: hidden !important; display: none !important; }
+    
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+    .hadith-card {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 25px; /* Tillagt för avstånd mellan sökresultat */
+        border-right: 6px solid #2E8B57;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .arabic-text {
+        font-family: 'Scheherazade New', serif;
+        font-size: 28px;
+        line-height: 1.8;
+        direction: rtl;
+        text-align: right;
+        color: #1a1a1a;
+        margin-top: 20px;
+        width: 100%;
+    }
+    
+    .arabic-text b { font-weight: 700; color: #2E8B57; }
+    .qal-highlight { color: #ff8c00; font-weight: bold; }
+    .narrator-highlight { color: #ec407a; font-weight: bold; }
+    .rasul-highlight { color: #d32f2f; font-weight: bold; }
+    
+    .saw-symbol { color: #d32f2f; font-family: 'Scheherazade New', serif; font-size: 1.1em; margin-right: 4px; }
+    .ra-symbol { color: #000000; font-family: 'Scheherazade New', serif; font-weight: normal; font-size: 1.1em; margin-right: 4px; }
+
+    .card-header {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid #f5f5f5; padding-bottom: 15px; direction: ltr; 
+    }
+    .meta-tag {
+        background-color: #f1f8e9; color: #2e7d32; padding: 6px 14px;
+        border-radius: 8px; font-size: 0.9rem; font-weight: 700;
+        border: 1px solid #dcedc8;
+    }
+
+    .raw-code-box {
+        background-color: #262730; color: #ffffff; border: 1px solid #444;
+        padding: 15px; border-radius: 8px; font-family: 'Scheherazade New', serif;
+        white-space: pre-wrap; direction: rtl; text-align: right; font-size: 18px; margin-top: 10px;
+    }
+    summary { color: #888; font-size: 0.8rem; cursor: pointer; margin-top: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -20,46 +75,41 @@ st.markdown("""
 def remove_diacritics(text):
     """Tar bort arabiska diakritiker för sökning."""
     if not isinstance(text, str): return ""
-    # Regex för att ta bort: fatha, damma, kasra, sukun, shadda, tanween
-    pattern = re.compile(r'[\u064B-\u0652]')
-    return re.sub(pattern, '', text)
+    # Tar bort: fatha, damma, kasra, sukun, shadda, tanween
+    return re.sub(r'[\u064B-\u0652]', '', text)
 
-def apply_custom_formatting(original_text):
-    """Din specifika formateringslogik."""
+def format_hadith_logic(original_text):
+    """Din exakta formateringsmotor."""
     # 1. Städning
-    cleaned_text = str(original_text).replace('\ufffd', '').replace('ـ', '').replace('-', '').replace('\n', ' ')
-    cleaned_text = re.sub(r'[^\u0020-\u007E\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]', '', cleaned_text)
+    cleaned = str(original_text).replace('\ufffd', '').replace('ـ', '').replace('-', '').replace('\n', ' ')
+    cleaned = re.sub(r'[^\u0020-\u007E\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]', '', cleaned)
 
-    # 2. Mönster för formatering
-    t = r'[\u064B-\u065F]*' 
-    s = r'\s*'             
-    y = f'[يى]{t}'        
+    # 2. Regex-mönster (Dina original)
+    t, s, y = r'[\u064B-\u065F]*', r'\s*', f'[يى][\u064B-\u065F]*'
     ra_base = f'ر{t}ض{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ن{t}ه{t}'
-    pattern_ra_anhuma = f'{ra_base}م{t}ا{t}'
-    pattern_ra_anha   = f'{ra_base}ا{t}'
-    pattern_ra_anhu   = f'{ra_base}'
-    sallallah = f'ص{t}ل{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ل{t}ي{t}ه{t}{s}و{t}س{t}ل{t}م{t}'
-    rasul_allah = f'ر{t}س{t}و{t}ل{t}{s}ا{t}ل{t}ل{t}ه{t}'
-    orange_words = f'ف{t}ق{t}ا{t}ل{t} |ف{t}ق{t}ا{t}ل{t}ت{t} |ي{t}ق{t}و{t}ل{t} |ق{t}ا{t}ل{t}ت{t} |ق{t}ا{t}ل{t} '
-    pink_words = f'ح{t}د{t}ث{t}ن{t}ا|ح{t}د{t}ث{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ا|عَن{t} |س{t}م{t}ع{t}ت{t}ُ?'
-    quote_str = r'".*?"|«.*?»|“.*?”'
     
-    master_pattern = f'(?P<quote>{quote_str})|(?P<saw>{sallallah})|(?P<ra_anhuma>{pattern_ra_anhuma})|(?P<ra_anha>{pattern_ra_anha})|(?P<ra_anhu>{pattern_ra_anhu})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
+    master_pattern = (
+        f'(?P<quote>".*?"|«.*?»|“.*?”)|'
+        f'(?P<saw>ص{t}ل{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ل{t}ي{t}ه{t}{s}و{t}س{t}ل{t}م{t})|'
+        f'(?P<ra>{ra_base}(م{t}ا{t}|ا{t})?)|'
+        f'(?P<pink>ح{t}د{t}ث{t}ن{t}ا|ح{t}د{t}ث{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ا|عَن{t} |س{t}م{t}ع{t}ت{t}ُ?)|'
+        f'(?P<orange>ف{t}ق{t}ا{t}ل{t}ت? |ي{t}ق{t}و{t}ل{t} |ق{t}ا{t}ل{t}ت? )|'
+        f'(?P<red>ر{t}س{t}و{t}ل{t}{s}ا{t}ل{t}ل{t}ه{t})'
+    )
 
-    def formatter_func(match):
-        group_name = match.lastgroup
-        text = match.group(0)
-        if group_name == 'saw': return '&nbsp;<span class="saw-symbol">ﷺ</span>'
-        if group_name in ['ra_anhuma', 'ra_anha', 'ra_anhu']: return '&nbsp;<span class="ra-symbol">ؓ</span>'
-        if group_name == 'quote': return f'<b>{text}</b>'
-        if group_name == 'pink': return f'<span class="narrator-highlight">{text}</span>'
-        if group_name == 'orange': return f'<span class="qal-highlight">{text}</span>'
-        if group_name == 'red': return f'<span class="rasul-highlight">{text}</span>'
-        return text
+    def repl(m):
+        g = m.lastgroup
+        txt = m.group(0)
+        if g == 'saw': return '&nbsp;<span class="saw-symbol">ﷺ</span>'
+        if g == 'ra': return '&nbsp;<span class="ra-symbol">ؓ</span>'
+        if g == 'quote': return f'<b>{txt}</b>'
+        if g == 'pink': return f'<span class="narrator-highlight">{txt}</span>'
+        if g == 'orange': return f'<span class="qal-highlight">{txt}</span>'
+        if g == 'red': return f'<span class="rasul-highlight">{txt}</span>'
+        return txt
 
-    formatted_text = re.sub(master_pattern, formatter_func, cleaned_text)
-    formatted_text = re.sub(r'\s+', ' ', formatted_text).strip()
-    return formatted_text
+    formatted = re.sub(master_pattern, repl, cleaned)
+    return re.sub(r'\s+', ' ', formatted).strip()
 
 # --- DATALOGIK ---
 @st.cache_data(show_spinner=False)
@@ -70,54 +120,39 @@ def get_dataset():
             resp = requests.get(url).json()
             df = pd.DataFrame(resp['hadiths'])
             df['book_name'] = book_name.capitalize()
-            # Skapa sökbar text genom att ta bort diakritiker vid laddning
+            # Förbereda sök-text (utan diakritiker)
             df['search_clean'] = df['text'].apply(remove_diacritics)
             return df
         except: return pd.DataFrame()
     
-    df_bukhari = load_book("bukhari")
-    df_muslim = load_book("muslim")
-    full_df = pd.concat([df_bukhari, df_muslim], ignore_index=True)
+    full_df = pd.concat([load_book("bukhari"), load_book("muslim")], ignore_index=True)
     full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
     return full_df
 
-with st.spinner("Laddar bibliotek..."):
-    df = get_dataset()
+df = get_dataset()
 
 # --- ANVÄNDARGRÄNSSNITT ---
-st.title("Hadith Sök & Bläddra")
+st.write("### 🔍 Sök eller Bläddra")
+search_query = st.text_input("Sök hadith (flera ord = OCH):", placeholder="t.ex. انما الاعمال")
 
-# Skapa två flikar: en för sökning och en för att bläddra via nummer
-tab_search, tab_browse = st.tabs(["🔍 Sök på text", "🔢 Bläddra per nummer"])
-
-with tab_search:
-    query = st.text_input("Sök (ange flera ord för 'och'-logik):", placeholder="t.ex. انما الاعمال")
-    results = pd.DataFrame()
-    
-    if query:
-        words = query.split()
-        # Starta med alla rader, filtrera sedan för varje ord
-        mask = pd.Series([True] * len(df))
-        for word in words:
-            mask = mask & df['search_clean'].str.contains(word, na=False)
-        results = df[mask]
-
-with tab_browse:
+if search_query:
+    # Söklogik: dela upp ord och filtrera
+    words = search_query.split()
+    mask = pd.Series([True] * len(df))
+    for word in words:
+        mask = mask & df['search_clean'].str.contains(word, na=False)
+    results = df[mask].head(15) # Begränsa för snabbhet
+else:
+    # Om ingen sökning, visa val via nummer (din gamla logik)
     col1, col2 = st.columns(2)
-    with col1:
-        selected_book = st.radio("Välj bok", ["Bukhari", "Muslim"], horizontal=True)
-    with col2:
-        hadith_id = st.number_input("Hadith Nummer", min_value=1, value=1, step=1)
-    
-    if not query: # Visa bara browse-resultat om användaren inte söker
-        results = df[(df['book_name'] == selected_book) & (df['hadithnumber'] == str(hadith_id))]
+    with col1: selected_book = st.radio("Bok", ["Bukhari", "Muslim"], horizontal=True)
+    with col2: hadith_id = st.number_input("Nummer", min_value=1, value=1)
+    results = df[(df['book_name'] == selected_book) & (df['hadithnumber'] == str(hadith_id))]
 
-# --- RENDERING AV KORT ---
+# --- RENDERING (Här behålls din exakta visuella stil) ---
 if not results.empty:
-    st.write(f"Hittade {len(results)} hadither:")
     for _, row in results.iterrows():
-        # Kör din formateringslogik på texten
-        display_text = apply_custom_formatting(row['text'])
+        formatted_text = format_hadith_logic(row['text'])
         
         st.markdown(f"""
         <div class="hadith-card">
@@ -125,12 +160,12 @@ if not results.empty:
                 <span class="meta-tag">📖 {row['book_name']}</span>
                 <span class="meta-tag"># {row['hadithnumber']}</span>
             </div>
-            <div class="arabic-text">{display_text}</div>
+            <div class="arabic-text">{formatted_text}</div>
             <details>
-                <summary>Original text</summary>
+                <summary>Visa originaltext</summary>
                 <div class="raw-code-box">{row['text']}</div>
             </details>
         </div>
         """, unsafe_allow_html=True)
-elif query:
-    st.warning("Inga träffar hittades.")
+elif search_query:
+    st.info("Inga träffar hittades.")
