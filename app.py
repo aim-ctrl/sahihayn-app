@@ -142,10 +142,15 @@ def clean_for_search(text):
     text = CLEAN_ALIF_PATTERN.sub('ا', text)
     text = CLEAN_YA_PATTERN.sub('ي', text)
     text = text.replace('ـ', '')
+    # Vi behåller mellanslag här, för vi behöver dem för frassökning
     return text
 
 def highlight_search_terms(text, search_words):
-    """Lägger till gul highlighting på sökorden."""
+    """
+    Lägger till gul highlighting på sökorden eller fraserna.
+    UPPDATERAD: Hanterar nu mellanslag som flexibel whitespace (\s+) 
+    för att matcha fraser korrekt även om det är radbrytningar i texten.
+    """
     if not search_words:
         return text
     
@@ -158,7 +163,10 @@ def highlight_search_terms(text, search_words):
         
         pattern_chars = []
         for char in word:
-            if char == 'ا':
+            if char == ' ':
+                # VIKTIGT: Ett mellanslag i sökningen matchar alla typer av whitespace i texten
+                pattern_chars.append(r'\s+')
+            elif char == 'ا':
                 pattern_chars.append(f'{alif_variants}{tashkeel}')
             elif char in ['ي', 'ى']:
                 pattern_chars.append(f'{ya_variants}{tashkeel}')
@@ -168,6 +176,7 @@ def highlight_search_terms(text, search_words):
         full_pattern = "".join(pattern_chars)
         
         try:
+            # (?i) för case-insensitive (mest formellt här), men viktigt är att vi ersätter hela matchningen
             text = re.sub(
                 f'({full_pattern})', 
                 r'<span class="search-highlight">\1</span>', 
@@ -237,14 +246,20 @@ if query:
         # Ta bort citattecknen
         raw_phrase = query[1:-1]
         
-        if raw_phrase.strip(): # Kolla så att det inte bara är tomma citattecken
+        if raw_phrase.strip():
             cleaned_phrase = clean_for_search(raw_phrase)
             
-            # Sök efter exakt denna sekvens. regex=False = bokstavlig sökning.
-            mask = df['search_text'].str.contains(cleaned_phrase, na=False, regex=False)
+            # Normalisera mellanslag inuti frasen till enkla mellanslag för sökningen
+            cleaned_phrase_normalized = ' '.join(cleaned_phrase.split())
+
+            # Sök efter exakt denna sekvens
+            mask = df['search_text'].str.contains(cleaned_phrase_normalized, na=False, regex=False)
             
-            # För highlighting delar vi upp frasen i ord så de lyser gult
-            search_words = cleaned_phrase.split()
+            # FÖR HIGHLIGHTING: 
+            # Vi skickar in hela frasen som ETT element i listan.
+            # highlight-funktionen kommer nu bygga ett regex som tillåter flexibla mellanrum.
+            search_words = [cleaned_phrase_normalized]
+            
             st.caption(f"🔍 Söker efter exakt fras: '{raw_phrase}'")
         else:
             mask = pd.Series([False] * len(df))
@@ -269,7 +284,7 @@ if query:
     if not results.empty:
         st.write(f"Hittade {len(results)} träffar:")
         for _, row in results.iterrows():
-            # 1. Tillämpa originalformatering (färger för rasul, narrators etc)
+            # 1. Tillämpa originalformatering
             formatted_text = apply_original_formatting(row['text'])
             
             # 2. Lägg till sök-highlighting
