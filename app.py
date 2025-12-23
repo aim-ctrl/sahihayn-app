@@ -233,7 +233,7 @@ with st.spinner("Laddar bibliotek..."):
     df = get_dataset()
 
 # --- ANVÄNDARGRÄNSSNITT ---
-st.write("## Hadith Sökmotor")
+
 query = st.text_input("Sök i Bukhari & Muslim:", placeholder='t.ex. انما الاعمال eller "exakt fras"')
 
 # --- SÖK OCH VISA RESULTAT ---
@@ -260,7 +260,7 @@ if query:
             # highlight-funktionen kommer nu bygga ett regex som tillåter flexibla mellanrum.
             search_words = [cleaned_phrase_normalized]
             
-            st.caption(f"🔍 Söker efter exakt fras: '{raw_phrase}'")
+            # st.caption(f"🔍 Söker efter exakt fras: '{raw_phrase}'")
         else:
             mask = pd.Series([False] * len(df))
             search_words = []
