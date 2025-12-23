@@ -88,7 +88,7 @@ st.markdown("""
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
     
     /* NYTT: Klass för text inom måsvingar (Blå) */
-    .curly-highlight { color: #1E90FF; font-weight: bold; }
+    .curly-highlight { color: #0328fc; font-weight: bold; }
     
     /* Sök-highlighting */
     .search-highlight {
