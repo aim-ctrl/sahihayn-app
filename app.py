@@ -8,8 +8,6 @@ import re
 st.set_page_config(page_title="Hadith Viewer & Sök", page_icon="☪️", layout="centered")
 
 # --- REGLER FÖR TEXTHANTERING (OPTIMERAD: Definieras globalt) ---
-# Genom att definiera dessa här uppe kompileras de bara en gång, vilket snabbar upp loopen avsevärt.
-
 # 1. Regex-byggstenar
 TASHKEEL = r'[\u064B-\u065F]*'
 SPACES = r'\s*'
@@ -84,9 +82,9 @@ st.markdown("""
     .narrator-highlight { color: #ec407a; font-weight: bold; }
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
     
-    /* NY CSS: Sök-highlighting */
+    /* Sök-highlighting */
     .search-highlight {
-        background-color: #fff59d; /* Ljusgul bakgrund */
+        background-color: #fff59d;
         border-radius: 4px;
         padding: 0 2px;
         box-shadow: 0 0 2px rgba(0,0,0,0.1);
@@ -147,44 +145,29 @@ def clean_for_search(text):
     return text
 
 def highlight_search_terms(text, search_words):
-    """
-    Lägger till gul highlighting på sökorden.
-    NU KORRIGERAD: Hanterar både vokaler (tashkeel) och bokstavsvarianter (Alif/Ya).
-    """
+    """Lägger till gul highlighting på sökorden."""
     if not search_words:
         return text
     
-    # 1. Definiera varianter för bokstäver som ofta skiljer sig åt
-    # Om sökordet har 'ا', matcha alla former av Alif. Samma för Ya.
     alif_variants = '[اأإآ]'
     ya_variants = '[يى]'
-    tashkeel = r'[\u064B-\u065F]*' # Vokaler/accenter
+    tashkeel = r'[\u064B-\u065F]*'
 
     for word in search_words:
         if not word: continue
         
-        # 2. Bygg ett flexibelt regex-mönster bokstav för bokstav
         pattern_chars = []
         for char in word:
             if char == 'ا':
-                # Om tecknet är Alif, tillåt alla varianter + vokaler efteråt
                 pattern_chars.append(f'{alif_variants}{tashkeel}')
             elif char in ['ي', 'ى']:
-                # Om tecknet är Ya, tillåt alla varianter + vokaler efteråt
                 pattern_chars.append(f'{ya_variants}{tashkeel}')
             else:
-                # För andra tecken, matcha tecknet exakt + eventuella vokaler efteråt
                 pattern_chars.append(f'{re.escape(char)}{tashkeel}')
         
-        # Sätt ihop hela ordets mönster
         full_pattern = "".join(pattern_chars)
         
-        # 3. Applicera highlight
-        # Vi använder (?<!\w) och (?!\w) för att undvika att highlighta delar av ord 
-        # (t.ex. så att "i" inte lyser upp mitt i "Ali"), men för arabiska är det klurigare.
-        # Denna enkla replace fungerar bäst för att fånga böjningar.
         try:
-            # (?i) gör den okänslig för versaler (ej relevant för arabiska men bra praxis)
             text = re.sub(
                 f'({full_pattern})', 
                 r'<span class="search-highlight">\1</span>', 
@@ -197,11 +180,9 @@ def highlight_search_terms(text, search_words):
 
 def apply_original_formatting(original_text):
     """Implementerar din exakta formateringslogik och städning."""
-    # 1. Städning och fix för citattecken
     text_to_process = str(original_text).replace('\ufffd', '').replace('ـ', '').replace('-', '')
     text_to_process = CLEAN_CHARS_PATTERN.sub('', text_to_process)
 
-    # Kontrollera om citattecken är ojämna (t.ex. Bukhari #1)
     if text_to_process.count('"') % 2 != 0:
         text_to_process += '"'
 
@@ -217,10 +198,7 @@ def apply_original_formatting(original_text):
         if group_name == 'red': return f'<span class="rasul-highlight">{match_text}</span>'
         return match_text
 
-    # Använd det pre-kompilerade mönstret
     formatted = MASTER_PATTERN.sub(formatter_func, text_to_process)
-    
-    # Sista putsning
     formatted = re.sub(r'\s+', ' ', formatted)
     formatted = re.sub(r'\s+([\.،,])', r'\1', formatted)
     return formatted.strip()
@@ -234,7 +212,6 @@ def get_dataset():
             resp = requests.get(url).json()
             df_book = pd.DataFrame(resp['hadiths'])
             df_book['book_name'] = book_name.capitalize()
-            # Skapa sök-index utan diakritiker vid laddning för prestanda
             df_book['search_text'] = df_book['text'].apply(clean_for_search)
             return df_book
         except: return pd.DataFrame()
@@ -248,32 +225,57 @@ with st.spinner("Laddar bibliotek..."):
 
 # --- ANVÄNDARGRÄNSSNITT ---
 st.write("## Hadith Sökmotor")
-query = st.text_input("Sök i Bukhari & Muslim (arabiska ord separerade med mellanslag):", placeholder="t.ex. انما الاعمال")
+query = st.text_input("Sök i Bukhari & Muslim:", placeholder='t.ex. انما الاعمال eller "exakt fras"')
 
 # --- SÖK OCH VISA RESULTAT ---
 if query:
-    # Förbered sökorden genom att normalisera dem också
-    cleaned_query = clean_for_search(query)
-    search_words = cleaned_query.split()
-    
-    # Skapa en mask för "OCH"-sökning
-    mask = pd.Series([True] * len(df))
-    for word in search_words:
-        mask = mask & df['search_text'].str.contains(word, na=False)
-    
+    query = query.strip() # Ta bort onödiga mellanslag runt sökningen
+
+    # --- LOGIK FÖR SÖKTYP ---
+    if query.startswith('"') and query.endswith('"'):
+        # 1. EXAKT FRAS-SÖKNING
+        # Ta bort citattecknen
+        raw_phrase = query[1:-1]
+        
+        if raw_phrase.strip(): # Kolla så att det inte bara är tomma citattecken
+            cleaned_phrase = clean_for_search(raw_phrase)
+            
+            # Sök efter exakt denna sekvens. regex=False = bokstavlig sökning.
+            mask = df['search_text'].str.contains(cleaned_phrase, na=False, regex=False)
+            
+            # För highlighting delar vi upp frasen i ord så de lyser gult
+            search_words = cleaned_phrase.split()
+            st.caption(f"🔍 Söker efter exakt fras: '{raw_phrase}'")
+        else:
+            mask = pd.Series([False] * len(df))
+            search_words = []
+            st.warning("Du angav tomma citattecken.")
+
+    else:
+        # 2. VANLIG SÖKNING (Orden kan komma i vilken ordning som helst)
+        cleaned_query = clean_for_search(query)
+        search_words = cleaned_query.split()
+        
+        if search_words:
+            mask = pd.Series([True] * len(df))
+            for word in search_words:
+                mask = mask & df['search_text'].str.contains(word, na=False)
+        else:
+            mask = pd.Series([False] * len(df))
+
+    # Hämta resultat
     results = df[mask]
 
     if not results.empty:
         st.write(f"Hittade {len(results)} träffar:")
         for _, row in results.iterrows():
-            # 1. Tillämpa din ursprungliga formatering
+            # 1. Tillämpa originalformatering (färger för rasul, narrators etc)
             formatted_text = apply_original_formatting(row['text'])
             
-            # 2. Lägg till GUL highlighting på sökorden (Ny funktion)
-            # Vi skickar in de "rena" sökorden, funktionen matchar dem mot texten med vokaler
+            # 2. Lägg till sök-highlighting
             formatted_text_highlighted = highlight_search_terms(formatted_text, search_words)
             
-            # Rendera kortet exakt enligt din design
+            # 3. Rendera kortet
             st.markdown(f"""
             <div class="hadith-card">
                 <div class="card-header">
@@ -288,6 +290,6 @@ if query:
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.info("Inga hadither hittades som innehåller alla dessa ord.")
+        st.info("Inga hadither hittades som matchar din sökning.")
 else:
     st.info("Vänligen skriv in sökord ovan för att söka i Bukhari och Muslim.")
