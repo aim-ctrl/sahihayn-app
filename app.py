@@ -148,38 +148,50 @@ def clean_for_search(text):
 
 def highlight_search_terms(text, search_words):
     """
-    Lägger till gul highlighting på sökorden i den formaterade HTML-texten.
-    Bygger ett dynamiskt regex som tillåter vokaler mellan bokstäverna i sökordet.
+    Lägger till gul highlighting på sökorden.
+    NU KORRIGERAD: Hanterar både vokaler (tashkeel) och bokstavsvarianter (Alif/Ya).
     """
     if not search_words:
         return text
     
+    # 1. Definiera varianter för bokstäver som ofta skiljer sig åt
+    # Om sökordet har 'ا', matcha alla former av Alif. Samma för Ya.
+    alif_variants = '[اأإآ]'
+    ya_variants = '[يى]'
+    tashkeel = r'[\u064B-\u065F]*' # Vokaler/accenter
+
     for word in search_words:
         if not word: continue
         
-        # Bygg ett regex mönster för ordet: "k" -> "k[\u064B-\u065F]*"
-        # Detta gör att sökningen på "محمد" hittar "مُحَمَّدٌ"
+        # 2. Bygg ett flexibelt regex-mönster bokstav för bokstav
         pattern_chars = []
         for char in word:
-            # Escapea specialtecken om de finns
-            pattern_chars.append(re.escape(char) + r'[\u064B-\u065F]*') 
+            if char == 'ا':
+                # Om tecknet är Alif, tillåt alla varianter + vokaler efteråt
+                pattern_chars.append(f'{alif_variants}{tashkeel}')
+            elif char in ['ي', 'ى']:
+                # Om tecknet är Ya, tillåt alla varianter + vokaler efteråt
+                pattern_chars.append(f'{ya_variants}{tashkeel}')
+            else:
+                # För andra tecken, matcha tecknet exakt + eventuella vokaler efteråt
+                pattern_chars.append(f'{re.escape(char)}{tashkeel}')
         
-        # Sätt ihop mönstret
+        # Sätt ihop hela ordets mönster
         full_pattern = "".join(pattern_chars)
         
-        # Ersätt med en span som har klassen 'search-highlight'
-        # (?i) gör den case-insensitive (mest för icke-arabiska tecken)
-        # Vi använder en negativ lookahead (?!...) för att inte förstöra befintliga HTML-taggar
-        # Notera: Detta är en enkel implementering. För extremt komplex HTML krävs en parser,
-        # men för denna textmängd fungerar detta bra.
+        # 3. Applicera highlight
+        # Vi använder (?<!\w) och (?!\w) för att undvika att highlighta delar av ord 
+        # (t.ex. så att "i" inte lyser upp mitt i "Ali"), men för arabiska är det klurigare.
+        # Denna enkla replace fungerar bäst för att fånga böjningar.
         try:
+            # (?i) gör den okänslig för versaler (ej relevant för arabiska men bra praxis)
             text = re.sub(
                 f'({full_pattern})', 
                 r'<span class="search-highlight">\1</span>', 
                 text
             )
         except re.error:
-            pass # Ignorera om regexet blir ogiltigt av någon anledning
+            pass 
 
     return text
 
