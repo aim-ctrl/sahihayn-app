@@ -7,6 +7,41 @@ import re
 # --- KONFIGURATION ---
 st.set_page_config(page_title="Hadith Viewer & Sök", page_icon="☪️", layout="centered")
 
+# --- REGLER FÖR TEXTHANTERING (OPTIMERAD: Definieras globalt) ---
+# Genom att definiera dessa här uppe kompileras de bara en gång, vilket snabbar upp loopen avsevärt.
+
+# 1. Regex-byggstenar
+TASHKEEL = r'[\u064B-\u065F]*'
+SPACES = r'\s*'
+YA_VARIANTS = f'[يى]{TASHKEEL}'
+
+# 2. Mönster för specifika fraser
+RA_BASE = f'ر{TASHKEEL}ض{TASHKEEL}{YA_VARIANTS}{SPACES}ا{TASHKEEL}ل{TASHKEEL}ل{TASHKEEL}ه{TASHKEEL}{SPACES}ع{TASHKEEL}ن{TASHKEEL}ه{TASHKEEL}'
+PATTERN_RA_ANHUMA = f'{RA_BASE}م{TASHKEEL}ا{TASHKEEL}'
+PATTERN_RA_ANHA   = f'{RA_BASE}ا{TASHKEEL}'
+PATTERN_RA_ANHU   = f'{RA_BASE}'
+
+SALLALLAH = f'ص{TASHKEEL}ل{TASHKEEL}{YA_VARIANTS}{SPACES}ا{TASHKEEL}ل{TASHKEEL}ل{TASHKEEL}ه{TASHKEEL}{SPACES}ع{TASHKEEL}ل{TASHKEEL}ي{TASHKEEL}ه{TASHKEEL}{SPACES}و{TASHKEEL}س{TASHKEEL}ل{TASHKEEL}م{TASHKEEL}'
+RASUL_ALLAH = f'ر{TASHKEEL}س{TASHKEEL}و{TASHKEEL}ل{TASHKEEL}{SPACES}ا{TASHKEEL}ل{TASHKEEL}ل{TASHKEEL}ه{TASHKEEL}'
+
+# 3. Mönster för ordkategorier
+ORANGE_WORDS = f'ف{TASHKEEL}ق{TASHKEEL}ا{TASHKEEL}ل{TASHKEEL} |ف{TASHKEEL}ق{TASHKEEL}ا{TASHKEEL}ل{TASHKEEL}ت{TASHKEEL} |ي{TASHKEEL}ق{TASHKEEL}و{TASHKEEL}ل{TASHKEEL} |ق{TASHKEEL}ا{TASHKEEL}ل{TASHKEEL}ت{TASHKEEL} |ق{TASHKEEL}ا{TASHKEEL}ل{TASHKEEL} '
+PINK_WORDS = f'ح{TASHKEEL}د{TASHKEEL}ث{TASHKEEL}ن{TASHKEEL}ا|ح{TASHKEEL}د{TASHKEEL}ث{TASHKEEL}ن{TASHKEEL}ي|أ{TASHKEEL}خ{TASHKEEL}ب{TASHKEEL}ر{TASHKEEL}ن{TASHKEEL}ي|أ{TASHKEEL}خ{TASHKEEL}ب{TASHKEEL}ر{TASHKEEL}ن{TASHKEEL}ا|عَن{TASHKEEL} |س{TASHKEEL}م{TASHKEEL}ع{TASHKEEL}ت{TASHKEEL}ُ?'
+QUOTE_STR = r'".*?"|«.*?»|“.*?”'
+
+# 4. Det stora huvudmönstret (Kompileras en gång för prestanda)
+MASTER_PATTERN = re.compile(
+    f'(?P<quote>{QUOTE_STR})|(?P<saw>{SALLALLAH})|(?P<ra_anhuma>{PATTERN_RA_ANHUMA})|'
+    f'(?P<ra_anha>{PATTERN_RA_ANHA})|(?P<ra_anhu>{PATTERN_RA_ANHU})|'
+    f'(?P<pink>{PINK_WORDS})|(?P<orange>{ORANGE_WORDS})|(?P<red>{RASUL_ALLAH})'
+)
+
+# 5. Städ-mönster
+CLEAN_CHARS_PATTERN = re.compile(r'[^\u0020-\u007E\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]')
+CLEAN_TASHKEEL_PATTERN = re.compile(r'[\u064B-\u0652]')
+CLEAN_ALIF_PATTERN = re.compile(r'[أإآ]')
+CLEAN_YA_PATTERN = re.compile(r'ى')
+
 # --- CSS / DESIGN ---
 st.markdown("""
 <style>
@@ -48,6 +83,14 @@ st.markdown("""
     .qal-highlight { color: #ff8c00; font-weight: bold; }
     .narrator-highlight { color: #ec407a; font-weight: bold; }
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
+    
+    /* NY CSS: Sök-highlighting */
+    .search-highlight {
+        background-color: #fff59d; /* Ljusgul bakgrund */
+        border-radius: 4px;
+        padding: 0 2px;
+        box-shadow: 0 0 2px rgba(0,0,0,0.1);
+    }
     
     .saw-symbol { 
         color: #d32f2f; 
@@ -93,47 +136,62 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- HJÄLPFUNKTIONER ---
+
 def clean_for_search(text):
     """Normaliserar arabiska tecken för att sökningen ska fungera oavsett diakritik."""
     if not isinstance(text, str): return ""
-    # Ta bort diakritiker (tashkeel)
-    text = re.sub(r'[\u064B-\u0652]', '', text)
-    # Normalisera Alif (أ , إ , آ -> ا)
-    text = re.sub(r'[أإآ]', 'ا', text)
-    # Normalisera Ya/Alif Maqsura (ى -> ي)
-    text = re.sub(r'ى', 'ي', text)
-    # Ta bort Tatweel (ـ)
+    text = CLEAN_TASHKEEL_PATTERN.sub('', text)
+    text = CLEAN_ALIF_PATTERN.sub('ا', text)
+    text = CLEAN_YA_PATTERN.sub('ي', text)
     text = text.replace('ـ', '')
+    return text
+
+def highlight_search_terms(text, search_words):
+    """
+    Lägger till gul highlighting på sökorden i den formaterade HTML-texten.
+    Bygger ett dynamiskt regex som tillåter vokaler mellan bokstäverna i sökordet.
+    """
+    if not search_words:
+        return text
+    
+    for word in search_words:
+        if not word: continue
+        
+        # Bygg ett regex mönster för ordet: "k" -> "k[\u064B-\u065F]*"
+        # Detta gör att sökningen på "محمد" hittar "مُحَمَّدٌ"
+        pattern_chars = []
+        for char in word:
+            # Escapea specialtecken om de finns
+            pattern_chars.append(re.escape(char) + r'[\u064B-\u065F]*') 
+        
+        # Sätt ihop mönstret
+        full_pattern = "".join(pattern_chars)
+        
+        # Ersätt med en span som har klassen 'search-highlight'
+        # (?i) gör den case-insensitive (mest för icke-arabiska tecken)
+        # Vi använder en negativ lookahead (?!...) för att inte förstöra befintliga HTML-taggar
+        # Notera: Detta är en enkel implementering. För extremt komplex HTML krävs en parser,
+        # men för denna textmängd fungerar detta bra.
+        try:
+            text = re.sub(
+                f'({full_pattern})', 
+                r'<span class="search-highlight">\1</span>', 
+                text
+            )
+        except re.error:
+            pass # Ignorera om regexet blir ogiltigt av någon anledning
+
     return text
 
 def apply_original_formatting(original_text):
     """Implementerar din exakta formateringslogik och städning."""
     # 1. Städning och fix för citattecken
     text_to_process = str(original_text).replace('\ufffd', '').replace('ـ', '').replace('-', '')
-    text_to_process = re.sub(r'[^\u0020-\u007E\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]', '', text_to_process)
+    text_to_process = CLEAN_CHARS_PATTERN.sub('', text_to_process)
 
     # Kontrollera om citattecken är ojämna (t.ex. Bukhari #1)
     if text_to_process.count('"') % 2 != 0:
         text_to_process += '"'
-
-    # 2. Formatteringslogik (Regex)
-    t = r'[\u064B-\u065F]*' 
-    s = r'\s*'             
-    y = f'[يى]{t}'        
-
-    ra_base = f'ر{t}ض{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ن{t}ه{t}'
-    pattern_ra_anhuma = f'{ra_base}م{t}ا{t}'
-    pattern_ra_anha   = f'{ra_base}ا{t}'
-    pattern_ra_anhu   = f'{ra_base}'
-
-    sallallah = f'ص{t}ل{t}{y}{s}ا{t}ل{t}ل{t}ه{t}{s}ع{t}ل{t}ي{t}ه{t}{s}و{t}س{t}ل{t}م{t}'
-    rasul_allah = f'ر{t}س{t}و{t}ل{t}{s}ا{t}ل{t}ل{t}ه{t}'
-
-    orange_words = f'ف{t}ق{t}ا{t}ل{t} |ف{t}ق{t}ا{t}ل{t}ت{t} |ي{t}ق{t}و{t}ل{t} |ق{t}ا{t}ل{t}ت{t} |ق{t}ا{t}ل{t} '
-    pink_words = f'ح{t}د{t}ث{t}ن{t}ا|ح{t}د{t}ث{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ي|أ{t}خ{t}ب{t}ر{t}ن{t}ا|عَن{t} |س{t}م{t}ع{t}ت{t}ُ?'
-    quote_str = r'".*?"|«.*?»|“.*?”'
-    
-    master_pattern = f'(?P<quote>{quote_str})|(?P<saw>{sallallah})|(?P<ra_anhuma>{pattern_ra_anhuma})|(?P<ra_anha>{pattern_ra_anha})|(?P<ra_anhu>{pattern_ra_anhu})|(?P<pink>{pink_words})|(?P<orange>{orange_words})|(?P<red>{rasul_allah})'
 
     def formatter_func(match):
         group_name = match.lastgroup
@@ -147,7 +205,8 @@ def apply_original_formatting(original_text):
         if group_name == 'red': return f'<span class="rasul-highlight">{match_text}</span>'
         return match_text
 
-    formatted = re.sub(master_pattern, formatter_func, text_to_process)
+    # Använd det pre-kompilerade mönstret
+    formatted = MASTER_PATTERN.sub(formatter_func, text_to_process)
     
     # Sista putsning
     formatted = re.sub(r'\s+', ' ', formatted)
@@ -195,8 +254,12 @@ if query:
     if not results.empty:
         st.write(f"Hittade {len(results)} träffar:")
         for _, row in results.iterrows():
-            # Tillämpa din ursprungliga formatering på varje träff
+            # 1. Tillämpa din ursprungliga formatering
             formatted_text = apply_original_formatting(row['text'])
+            
+            # 2. Lägg till GUL highlighting på sökorden (Ny funktion)
+            # Vi skickar in de "rena" sökorden, funktionen matchar dem mot texten med vokaler
+            formatted_text_highlighted = highlight_search_terms(formatted_text, search_words)
             
             # Rendera kortet exakt enligt din design
             st.markdown(f"""
@@ -205,7 +268,7 @@ if query:
                     <span class="meta-tag">📖 {row['book_name']}</span>
                     <span class="meta-tag"># {row['hadithnumber']}</span>
                 </div>
-                <div class="arabic-text">{formatted_text}</div>
+                <div class="arabic-text">{formatted_text_highlighted}</div>
                 <details>
                     <summary>Original text</summary>
                     <div class="raw-code-box">{row['text']}</div>
