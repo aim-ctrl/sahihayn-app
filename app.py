@@ -31,7 +31,6 @@ QUOTE_STR = r'".*?"|«.*?»|“.*?”'
 CURLY_BRACES = r'\{.*?\}'
 
 # 4. Det stora huvudmönstret (Kompileras en gång för prestanda)
-# Vi lägger till (?P<curly>{CURLY_BRACES}) i mönstret
 MASTER_PATTERN = re.compile(
     f'(?P<quote>{QUOTE_STR})|(?P<saw>{SALLALLAH})|(?P<ra_anhuma>{PATTERN_RA_ANHUMA})|'
     f'(?P<ra_anha>{PATTERN_RA_ANHA})|(?P<ra_anhu>{PATTERN_RA_ANHU})|'
@@ -57,6 +56,12 @@ st.markdown("""
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 1rem !important;
+    }
+
+    /* --- HÄR ÄR ÄNDRINGEN: GÖR SÖKFÄLTET RTL --- */
+    .stTextInput input {
+        direction: rtl;
+        text-align: right;
     }
 
     .hadith-card {
@@ -87,7 +92,6 @@ st.markdown("""
     .narrator-highlight { color: #ec407a; font-weight: bold; }
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
     
-    /* NYTT: Klass för text inom måsvingar (Blå) */
     .curly-highlight { color: #0328fc; font-weight: bold; }
     
     /* Sök-highlighting */
@@ -150,14 +154,11 @@ def clean_for_search(text):
     text = CLEAN_ALIF_PATTERN.sub('ا', text)
     text = CLEAN_YA_PATTERN.sub('ي', text)
     text = text.replace('ـ', '')
-    # Vi behåller mellanslag här, för vi behöver dem för frassökning
     return text
 
 def highlight_search_terms(text, search_words):
     """
     Lägger till gul highlighting på sökorden eller fraserna.
-    UPPDATERAD: Hanterar nu mellanslag som flexibel whitespace (\s+) 
-    för att matcha fraser korrekt även om det är radbrytningar i texten.
     """
     if not search_words:
         return text
@@ -172,7 +173,6 @@ def highlight_search_terms(text, search_words):
         pattern_chars = []
         for char in word:
             if char == ' ':
-                # VIKTIGT: Ett mellanslag i sökningen matchar alla typer av whitespace i texten
                 pattern_chars.append(r'\s+')
             elif char == 'ا':
                 pattern_chars.append(f'{alif_variants}{tashkeel}')
@@ -184,7 +184,6 @@ def highlight_search_terms(text, search_words):
         full_pattern = "".join(pattern_chars)
         
         try:
-            # (?i) för case-insensitive (mest formellt här), men viktigt är att vi ersätter hela matchningen
             text = re.sub(
                 f'({full_pattern})', 
                 r'<span class="search-highlight">\1</span>', 
@@ -213,8 +212,6 @@ def apply_original_formatting(original_text):
         if group_name == 'pink': return f'<span class="narrator-highlight">{match_text}</span>'
         if group_name == 'orange': return f'<span class="qal-highlight">{match_text}</span>'
         if group_name == 'red': return f'<span class="rasul-highlight">{match_text}</span>'
-        
-        # NYTT: Hanterar blå färg för text inom måsvingar
         if group_name == 'curly': return f'<span class="curly-highlight">{match_text}</span>'
         
         return match_text
@@ -250,36 +247,25 @@ query = st.text_input("Sök i Bukhari & Muslim:", placeholder='t.ex. انما ا
 
 # --- SÖK OCH VISA RESULTAT ---
 if query:
-    query = query.strip() # Ta bort onödiga mellanslag runt sökningen
+    query = query.strip()
 
     # --- LOGIK FÖR SÖKTYP ---
     if query.startswith('"') and query.endswith('"'):
         # 1. EXAKT FRAS-SÖKNING
-        # Ta bort citattecknen
         raw_phrase = query[1:-1]
         
         if raw_phrase.strip():
             cleaned_phrase = clean_for_search(raw_phrase)
-            
-            # Normalisera mellanslag inuti frasen till enkla mellanslag för sökningen
             cleaned_phrase_normalized = ' '.join(cleaned_phrase.split())
-
-            # Sök efter exakt denna sekvens
             mask = df['search_text'].str.contains(cleaned_phrase_normalized, na=False, regex=False)
-            
-            # FÖR HIGHLIGHTING: 
-            # Vi skickar in hela frasen som ETT element i listan.
-            # highlight-funktionen kommer nu bygga ett regex som tillåter flexibla mellanrum.
             search_words = [cleaned_phrase_normalized]
-            
-            # st.caption(f"🔍 Söker efter exakt fras: '{raw_phrase}'")
         else:
             mask = pd.Series([False] * len(df))
             search_words = []
             st.warning("Du angav tomma citattecken.")
 
     else:
-        # 2. VANLIG SÖKNING (Orden kan komma i vilken ordning som helst)
+        # 2. VANLIG SÖKNING
         cleaned_query = clean_for_search(query)
         search_words = cleaned_query.split()
         
@@ -296,13 +282,9 @@ if query:
     if not results.empty:
         st.write(f"Hittade {len(results)} träffar:")
         for _, row in results.iterrows():
-            # 1. Tillämpa originalformatering
             formatted_text = apply_original_formatting(row['text'])
-            
-            # 2. Lägg till sök-highlighting
             formatted_text_highlighted = highlight_search_terms(formatted_text, search_words)
             
-            # 3. Rendera kortet
             st.markdown(f"""
             <div class="hadith-card">
                 <div class="card-header">
