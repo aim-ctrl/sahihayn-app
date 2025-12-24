@@ -72,7 +72,7 @@ st.markdown("""
         text-align: right; 
     }
 
-    /* 3. HÄR ÄR NYHETEN: Dölj "Press Enter to apply"-texten så den inte krockar */
+    /* 3. Dölj "Press Enter to apply"-texten så den inte krockar */
     [data-testid="InputInstructions"] {
         display: none !important;
     }
@@ -234,29 +234,54 @@ def apply_original_formatting(original_text):
     formatted = re.sub(r'\s+([\.،,])', r'\1', formatted)
     return formatted.strip()
 
-# --- DATALOGIK ---
+# --- DATALOGIK (HÄMTAR NU AL-KUTUB AL-SITTAH) ---
 @st.cache_data(show_spinner=False)
 def get_dataset():
-    def load_book(book_name):
-        url = f"https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-{book_name}.json"
+    # Lista över de sex böckerna och deras API-namn
+    books_config = [
+        ("bukhari", "Sahih Bukhari"),
+        ("muslim", "Sahih Muslim"),
+        ("abudawud", "Sunan Abu Dawood"),
+        ("tirmidhi", "Jami' At-Tirmidhi"),
+        ("nasai", "Sunan An-Nasa'i"),
+        ("ibnmajah", "Sunan Ibn Majah")
+    ]
+    
+    dataframes = []
+
+    # Funktion för att ladda en specifik bok
+    def load_book(api_slug, display_name):
+        url = f"https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-{api_slug}.json"
         try:
             resp = requests.get(url).json()
-            df_book = pd.DataFrame(resp['hadiths'])
-            df_book['book_name'] = book_name.capitalize()
-            df_book['search_text'] = df_book['text'].apply(clean_for_search)
-            return df_book
-        except: return pd.DataFrame()
+            if 'hadiths' in resp:
+                df_book = pd.DataFrame(resp['hadiths'])
+                df_book['book_name'] = display_name
+                df_book['search_text'] = df_book['text'].apply(clean_for_search)
+                return df_book
+        except Exception:
+            pass # Om en bok misslyckas, hoppa över den utan att krascha
+        return pd.DataFrame()
     
-    full_df = pd.concat([load_book("bukhari"), load_book("muslim")], ignore_index=True)
-    full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
+    # Ladda alla böcker
+    for slug, name in books_config:
+        dataframes.append(load_book(slug, name))
+    
+    # Slå ihop allt till en stor tabell
+    full_df = pd.concat(dataframes, ignore_index=True)
+    
+    if not full_df.empty:
+        # Fixa hadithnummer
+        full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
+    
     return full_df
 
-with st.spinner("Laddar bibliotek..."):
+with st.spinner("Laddar bibliotek (Al-Kutub Al-Sittah)..."):
     df = get_dataset()
 
 # --- ANVÄNDARGRÄNSSNITT ---
 
-query = st.text_input("Sök i Bukhari & Muslim:", placeholder='مثال: انما الاعمال')
+query = st.text_input("Sök i Al-Kutub Al-Sittah (De sex böckerna):", placeholder='مثال: انما الاعمال')
 
 # --- SÖK OCH VISA RESULTAT ---
 if query:
@@ -314,4 +339,4 @@ if query:
     else:
         st.info("Inga hadither hittades som matchar din sökning.")
 else:
-    st.info("Vänligen skriv in sökord ovan för att söka i Bukhari och Muslim.")
+    st.info("Vänligen skriv in sökord ovan för att söka i Al-Kutub Al-Sittah.")
