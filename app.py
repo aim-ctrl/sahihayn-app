@@ -58,16 +58,15 @@ st.markdown("""
         padding-bottom: 1rem !important;
     }
 
-    /* --- SÖKFÄLTS-FIX --- */
-    /* 1. När man skriver blir det RTL (Arabiska) */
+    /* --- SÖKFÄLTS-FIX (Nu helt anpassat för Arabiska) --- */
     .stTextInput input {
         direction: rtl;
         text-align: right;
     }
     
-    /* 2. Placeholder-texten (hjälptexten) tvingas till LTR (Svenska) för korrekt ordföljd */
+    /* Vi behöver inte tvinga placeholder till LTR längre eftersom texten är arabiska */
     .stTextInput input::placeholder {
-        direction: ltr;
+        direction: rtl;
         text-align: right; 
     }
 
@@ -250,7 +249,8 @@ with st.spinner("Laddar bibliotek..."):
 
 # --- ANVÄNDARGRÄNSSNITT ---
 
-query = st.text_input("Sök i Bukhari & Muslim:", placeholder='t.ex. انما الاعمال eller "exakt fras"')
+# HÄR ÄR ÄNDRINGEN: Platshållaren är nu på arabiska
+query = st.text_input("Sök i Bukhari & Muslim:", placeholder='مثال: انما الاعمال')
 
 # --- SÖK OCH VISA RESULTAT ---
 if query:
