@@ -59,20 +59,14 @@ st.markdown("""
     }
 
     /* --- SÖKFÄLTS-FIXAR --- */
-    
-    /* 1. Gör texten RTL (Arabiska) */
     .stTextInput input {
         direction: rtl;
         text-align: right;
     }
-    
-    /* 2. Platshållaren (hjälptexten) ska också vara RTL */
     .stTextInput input::placeholder {
         direction: rtl;
         text-align: right; 
     }
-
-    /* 3. Dölj "Press Enter to apply"-texten så den inte krockar */
     [data-testid="InputInstructions"] {
         display: none !important;
     }
@@ -107,7 +101,6 @@ st.markdown("""
     
     .curly-highlight { color: #0328fc; font-weight: bold; }
     
-    /* Sök-highlighting */
     .search-highlight {
         background-color: #fff59d;
         border-radius: 4px;
@@ -138,6 +131,7 @@ st.markdown("""
         background-color: #f1f8e9; color: #2e7d32; padding: 6px 14px;
         border-radius: 8px; font-size: 0.9rem; font-weight: 700;
         border: 1px solid #dcedc8;
+        white-space: nowrap; /* Förhindra radbrytning inuti taggen */
     }
 
     .raw-code-box {
@@ -170,9 +164,6 @@ def clean_for_search(text):
     return text
 
 def highlight_search_terms(text, search_words):
-    """
-    Lägger till gul highlighting på sökorden eller fraserna.
-    """
     if not search_words:
         return text
     
@@ -208,7 +199,6 @@ def highlight_search_terms(text, search_words):
     return text
 
 def apply_original_formatting(original_text):
-    """Implementerar din exakta formateringslogik och städning."""
     text_to_process = str(original_text).replace('\ufffd', '').replace('ـ', '').replace('-', '')
     text_to_process = CLEAN_CHARS_PATTERN.sub('', text_to_process)
 
@@ -237,7 +227,6 @@ def apply_original_formatting(original_text):
 # --- DATALOGIK (HÄMTAR NU AL-KUTUB AL-SITTAH) ---
 @st.cache_data(show_spinner=False)
 def get_dataset():
-    # Lista över de sex böckerna och deras API-namn
     books_config = [
         ("bukhari", "Sahih Bukhari"),
         ("muslim", "Sahih Muslim"),
@@ -249,7 +238,6 @@ def get_dataset():
     
     dataframes = []
 
-    # Funktion för att ladda en specifik bok
     def load_book(api_slug, display_name):
         url = f"https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-{api_slug}.json"
         try:
@@ -260,18 +248,15 @@ def get_dataset():
                 df_book['search_text'] = df_book['text'].apply(clean_for_search)
                 return df_book
         except Exception:
-            pass # Om en bok misslyckas, hoppa över den utan att krascha
+            pass 
         return pd.DataFrame()
     
-    # Ladda alla böcker
     for slug, name in books_config:
         dataframes.append(load_book(slug, name))
     
-    # Slå ihop allt till en stor tabell
     full_df = pd.concat(dataframes, ignore_index=True)
     
     if not full_df.empty:
-        # Fixa hadithnummer
         full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
     
     return full_df
@@ -291,7 +276,6 @@ if query:
     if query.startswith('"') and query.endswith('"'):
         # 1. EXAKT FRAS-SÖKNING
         raw_phrase = query[1:-1]
-        
         if raw_phrase.strip():
             cleaned_phrase = clean_for_search(raw_phrase)
             cleaned_phrase_normalized = ' '.join(cleaned_phrase.split())
@@ -301,12 +285,10 @@ if query:
             mask = pd.Series([False] * len(df))
             search_words = []
             st.warning("Du angav tomma citattecken.")
-
     else:
         # 2. VANLIG SÖKNING
         cleaned_query = clean_for_search(query)
         search_words = cleaned_query.split()
-        
         if search_words:
             mask = pd.Series([True] * len(df))
             for word in search_words:
@@ -318,7 +300,21 @@ if query:
     results = df[mask]
 
     if not results.empty:
-        st.write(f"Hittade {len(results)} träffar:")
+        # --- NY LOGIK: BERÄKNA OCH VISA STATISTIK ---
+        total_hits = len(results)
+        book_counts = results['book_name'].value_counts()
+        
+        # Skapa en HTML-sträng med taggar för varje bok som har träffar
+        stats_html = f'<div style="margin-bottom: 20px; direction: ltr;"><strong>Hittade {total_hits} träffar:</strong><br><div style="margin-top:8px;">'
+        
+        # Loopa igenom böckerna sorterat på antal träffar
+        for book, count in book_counts.items():
+            stats_html += f'<span class="meta-tag" style="margin-right: 8px; display: inline-block; margin-bottom: 8px;">{book}: {count}</span>'
+        
+        stats_html += '</div></div>'
+        st.markdown(stats_html, unsafe_allow_html=True)
+        # --------------------------------------------
+
         for _, row in results.iterrows():
             formatted_text = apply_original_formatting(row['text'])
             formatted_text_highlighted = highlight_search_terms(formatted_text, search_words)
