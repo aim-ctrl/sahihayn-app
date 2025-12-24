@@ -58,16 +58,23 @@ st.markdown("""
         padding-bottom: 1rem !important;
     }
 
-    /* --- SÖKFÄLTS-FIX (Nu helt anpassat för Arabiska) --- */
+    /* --- SÖKFÄLTS-FIXAR --- */
+    
+    /* 1. Gör texten RTL (Arabiska) */
     .stTextInput input {
         direction: rtl;
         text-align: right;
     }
     
-    /* Vi behöver inte tvinga placeholder till LTR längre eftersom texten är arabiska */
+    /* 2. Platshållaren (hjälptexten) ska också vara RTL */
     .stTextInput input::placeholder {
         direction: rtl;
         text-align: right; 
+    }
+
+    /* 3. HÄR ÄR NYHETEN: Dölj "Press Enter to apply"-texten så den inte krockar */
+    [data-testid="InputInstructions"] {
+        display: none !important;
     }
 
     .hadith-card {
@@ -249,7 +256,6 @@ with st.spinner("Laddar bibliotek..."):
 
 # --- ANVÄNDARGRÄNSSNITT ---
 
-# HÄR ÄR ÄNDRINGEN: Platshållaren är nu på arabiska
 query = st.text_input("Sök i Bukhari & Muslim:", placeholder='مثال: انما الاعمال')
 
 # --- SÖK OCH VISA RESULTAT ---
