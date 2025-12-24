@@ -58,10 +58,17 @@ st.markdown("""
         padding-bottom: 1rem !important;
     }
 
-    /* --- HÄR ÄR ÄNDRINGEN: GÖR SÖKFÄLTET RTL --- */
+    /* --- SÖKFÄLTS-FIX --- */
+    /* 1. När man skriver blir det RTL (Arabiska) */
     .stTextInput input {
         direction: rtl;
         text-align: right;
+    }
+    
+    /* 2. Placeholder-texten (hjälptexten) tvingas till LTR (Svenska) för korrekt ordföljd */
+    .stTextInput input::placeholder {
+        direction: ltr;
+        text-align: right; 
     }
 
     .hadith-card {
