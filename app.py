@@ -83,7 +83,7 @@ st.markdown("""
     
     /* Minska avståndet mellan kolumnerna i filtret */
     [data-testid="column"] {
-        padding: 0px 2px;
+        padding: 0px 0px;
     }
 
     .hadith-card {
@@ -273,7 +273,7 @@ if query:
         book_counts = all_results['book_name'].value_counts()
         
         # --- KOMPAKTA FILTER-KNAPPAR ---
-        st.markdown(f'<div style="margin-bottom: 5px; direction: ltr; font-size:14px;"><strong>Hittade {total_hits} träffar. Filtrera:</strong></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="margin-bottom: 1px; direction: ltr; font-size: 2px;"><strong>Hittade {total_hits} träffar. Filtrera:</strong></div>', unsafe_allow_html=True)
         
         # Skapa EXAKT TVÅ kolumner med litet gap
         cols = st.columns(2, gap="small")
@@ -293,7 +293,6 @@ if query:
                         st.session_state.active_book_filter = book_name
                     st.rerun()
 
-        st.markdown("---") 
 
         # --- VISA RESULTAT ---
         results_to_display = all_results
