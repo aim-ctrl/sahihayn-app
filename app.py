@@ -148,7 +148,7 @@ st.markdown("""
         margin-top: 10px;
     }
     
-    summary { color: #000; font-weight: bold; cursor: pointer; }
+    summary { color: #000; font-weight: bold; cursor: pointer; font-size: 12px }
 </style>
 """, unsafe_allow_html=True)
 
