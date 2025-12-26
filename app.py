@@ -85,8 +85,8 @@ st.markdown("""
     
     .arabic-text {
         font-family: 'Scheherazade New', serif;
-        font-size: 28px;
-        line-height: 1.8;
+        font-size: 20px;
+        line-height: 1.6;
         direction: rtl;
         text-align: right;
         color: #1a1a1a;
