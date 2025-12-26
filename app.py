@@ -72,7 +72,7 @@ st.markdown("""
     
     /* 1. Tvinga minskat avstånd (gap) mellan elementen inuti kolumnen */
     [data-testid="column"] > div {
-        gap: 0.0rem !important; /* Här styr du avståndet mellan knapparna vertikalt */
+        gap: -0.5rem !important; /* Här styr du avståndet mellan knapparna vertikalt */
     }
 
     div.stButton > button {
