@@ -7,20 +7,17 @@ import re
 # --- KONFIGURATION ---
 st.set_page_config(page_title="Hadith Viewer & Sök", page_icon="☪️", layout="centered")
 
-# --- INITIALISERA SESSION STATE (NYTT) ---
-# Vi behöver minnas filtret och senaste sökningen mellan knapptryckningar
+# --- INITIALISERA SESSION STATE ---
 if 'active_book_filter' not in st.session_state:
     st.session_state.active_book_filter = None
 if 'last_query' not in st.session_state:
     st.session_state.last_query = ""
 
 # --- REGLER FÖR TEXTHANTERING ---
-# 1. Regex-byggstenar
 TASHKEEL = r'[\u064B-\u065F]*'
 SPACES = r'\s*'
 YA_VARIANTS = f'[يى]{TASHKEEL}'
 
-# 2. Mönster för specifika fraser
 RA_BASE = f'ر{TASHKEEL}ض{TASHKEEL}{YA_VARIANTS}{SPACES}ا{TASHKEEL}ل{TASHKEEL}ل{TASHKEEL}ه{TASHKEEL}{SPACES}ع{TASHKEEL}ن{TASHKEEL}ه{TASHKEEL}'
 PATTERN_RA_ANHUMA = f'{RA_BASE}م{TASHKEEL}ا{TASHKEEL}'
 PATTERN_RA_ANHA   = f'{RA_BASE}ا{TASHKEEL}'
@@ -29,15 +26,11 @@ PATTERN_RA_ANHU   = f'{RA_BASE}'
 SALLALLAH = f'ص{TASHKEEL}ل{TASHKEEL}{YA_VARIANTS}{SPACES}ا{TASHKEEL}ل{TASHKEEL}ل{TASHKEEL}ه{TASHKEEL}{SPACES}ع{TASHKEEL}ل{TASHKEEL}ي{TASHKEEL}ه{TASHKEEL}{SPACES}و{TASHKEEL}س{TASHKEEL}ل{TASHKEEL}م{TASHKEEL}'
 RASUL_ALLAH = f'ر{TASHKEEL}س{TASHKEEL}و{TASHKEEL}ل{TASHKEEL}{SPACES}ا{TASHKEEL}ل{TASHKEEL}ل{TASHKEEL}ه{TASHKEEL}'
 
-# 3. Mönster för ordkategorier
 ORANGE_WORDS = f'ف{TASHKEEL}ق{TASHKEEL}ا{TASHKEEL}ل{TASHKEEL} |ف{TASHKEEL}ق{TASHKEEL}ا{TASHKEEL}ل{TASHKEEL}ت{TASHKEEL} |ي{TASHKEEL}ق{TASHKEEL}و{TASHKEEL}ل{TASHKEEL} |ق{TASHKEEL}ا{TASHKEEL}ل{TASHKEEL}ت{TASHKEEL} |ق{TASHKEEL}ا{TASHKEEL}ل{TASHKEEL} '
 PINK_WORDS = f'ح{TASHKEEL}د{TASHKEEL}ث{TASHKEEL}ن{TASHKEEL}ا|ح{TASHKEEL}د{TASHKEEL}ث{TASHKEEL}ن{TASHKEEL}ي|أ{TASHKEEL}خ{TASHKEEL}ب{TASHKEEL}ر{TASHKEEL}ن{TASHKEEL}ي|أ{TASHKEEL}خ{TASHKEEL}ب{TASHKEEL}ر{TASHKEEL}ن{TASHKEEL}ا|عَن{TASHKEEL} |س{TASHKEEL}م{TASHKEEL}ع{TASHKEEL}ت{TASHKEEL}ُ?'
 QUOTE_STR = r'".*?"|«.*?»|“.*?”'
-
-# Mönster för måsvingar
 CURLY_BRACES = r'\{.*?\}'
 
-# 4. Det stora huvudmönstret
 MASTER_PATTERN = re.compile(
     f'(?P<quote>{QUOTE_STR})|(?P<saw>{SALLALLAH})|(?P<ra_anhuma>{PATTERN_RA_ANHUMA})|'
     f'(?P<ra_anha>{PATTERN_RA_ANHA})|(?P<ra_anhu>{PATTERN_RA_ANHU})|'
@@ -45,7 +38,6 @@ MASTER_PATTERN = re.compile(
     f'(?P<curly>{CURLY_BRACES})'
 )
 
-# 5. Städ-mönster
 CLEAN_CHARS_PATTERN = re.compile(r'[^\u0020-\u007E\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]')
 CLEAN_TASHKEEL_PATTERN = re.compile(r'[\u064B-\u0652]')
 CLEAN_ALIF_PATTERN = re.compile(r'[أإآ]')
@@ -74,16 +66,24 @@ st.markdown("""
         direction: rtl;
         text-align: right; 
     }
-    [data-testid="InputInstructions"] {
-        display: none !important;
-    }
+    [data-testid="InputInstructions"] { display: none !important; }
 
-    /* Justering av standardknappar för filter */
+    /* --- KOMPAKTA KNAPPAR (NYTT) --- */
     div.stButton > button {
         width: 100%;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 13px;          /* Mindre text */
+        padding: 2px 8px;         /* Mindre luft inuti knappen */
+        min-height: 0px;          /* Ta bort standardhöjd */
+        height: auto;             /* Låt texten styra höjden */
+        line-height: 1.4;
+        margin-top: 0px !important;
+        margin-bottom: 0px !important;
+    }
+    
+    /* Minska avståndet mellan kolumnerna i filtret */
+    [data-testid="column"] {
+        padding: 0px 4px;
     }
 
     .hadith-card {
@@ -113,7 +113,6 @@ st.markdown("""
     .qal-highlight { color: #ff8c00; font-weight: bold; }
     .narrator-highlight { color: #ec407a; font-weight: bold; }
     .rasul-highlight { color: #d32f2f; font-weight: bold; }
-    
     .curly-highlight { color: #0328fc; font-weight: bold; }
     
     .search-highlight {
@@ -123,20 +122,13 @@ st.markdown("""
         box-shadow: 0 0 2px rgba(0,0,0,0.1);
     }
     
-    .saw-symbol { 
-        color: #d32f2f; 
+    .saw-symbol, .ra-symbol { 
         font-family: 'Scheherazade New', serif; 
         font-size: 0.9em;
         margin-right: 4px; 
     }
-
-    .ra-symbol { 
-        color: #000000; 
-        font-family: 'Scheherazade New', serif; 
-        font-weight: normal; 
-        font-size: 0.9em;
-        margin-right: 4px; 
-    }
+    .saw-symbol { color: #d32f2f; }
+    .ra-symbol { color: #000000; font-weight: normal; }
 
     .card-header {
         display: flex; justify-content: space-between; align-items: center;
@@ -150,17 +142,10 @@ st.markdown("""
     }
 
     .raw-code-box {
-        background-color: #262730; 
-        color: #ffffff;            
-        border: 1px solid #444;
-        padding: 15px;
-        border-radius: 8px;
-        font-family: 'Scheherazade New', serif;
-        white-space: pre-wrap; 
-        direction: rtl;
-        text-align: right;
-        font-size: 14px;
-        margin-top: 10px;
+        background-color: #262730; color: #ffffff; border: 1px solid #444;
+        padding: 15px; border-radius: 8px; font-family: 'Scheherazade New', serif;
+        white-space: pre-wrap; direction: rtl; text-align: right;
+        font-size: 14px; margin-top: 10px;
     }
     
     summary { color: #000; font-weight: bold; cursor: pointer; font-size: 12px }
@@ -168,9 +153,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- HJÄLPFUNKTIONER ---
-
 def clean_for_search(text):
-    """Normaliserar arabiska tecken för att sökningen ska fungera oavsett diakritik."""
     if not isinstance(text, str): return ""
     text = CLEAN_TASHKEEL_PATTERN.sub('', text)
     text = CLEAN_ALIF_PATTERN.sub('ا', text)
@@ -179,51 +162,34 @@ def clean_for_search(text):
     return text
 
 def highlight_search_terms(text, search_words):
-    if not search_words:
-        return text
-    
+    if not search_words: return text
     alif_variants = '[اأإآ]'
     ya_variants = '[يى]'
     tashkeel = r'[\u064B-\u065F]*'
 
     for word in search_words:
         if not word: continue
-        
         pattern_chars = []
         for char in word:
-            if char == ' ':
-                pattern_chars.append(r'\s+')
-            elif char == 'ا':
-                pattern_chars.append(f'{alif_variants}{tashkeel}')
-            elif char in ['ي', 'ى']:
-                pattern_chars.append(f'{ya_variants}{tashkeel}')
-            else:
-                pattern_chars.append(f'{re.escape(char)}{tashkeel}')
+            if char == ' ': pattern_chars.append(r'\s+')
+            elif char == 'ا': pattern_chars.append(f'{alif_variants}{tashkeel}')
+            elif char in ['ي', 'ى']: pattern_chars.append(f'{ya_variants}{tashkeel}')
+            else: pattern_chars.append(f'{re.escape(char)}{tashkeel}')
         
         full_pattern = "".join(pattern_chars)
-        
         try:
-            text = re.sub(
-                f'({full_pattern})', 
-                r'<span class="search-highlight">\1</span>', 
-                text
-            )
-        except re.error:
-            pass 
-
+            text = re.sub(f'({full_pattern})', r'<span class="search-highlight">\1</span>', text)
+        except re.error: pass 
     return text
 
 def apply_original_formatting(original_text):
     text_to_process = str(original_text).replace('\ufffd', '').replace('ـ', '').replace('-', '')
     text_to_process = CLEAN_CHARS_PATTERN.sub('', text_to_process)
-
-    if text_to_process.count('"') % 2 != 0:
-        text_to_process += '"'
+    if text_to_process.count('"') % 2 != 0: text_to_process += '"'
 
     def formatter_func(match):
         group_name = match.lastgroup
         match_text = match.group(0)
-        
         if group_name == 'saw': return '&nbsp;<span class="saw-symbol">ﷺ</span>'
         if group_name in ['ra_anhuma', 'ra_anha', 'ra_anhu']: return '&nbsp;<span class="ra-symbol">ؓ</span>'
         if group_name == 'quote': return f'<b>{match_text}</b>'
@@ -231,7 +197,6 @@ def apply_original_formatting(original_text):
         if group_name == 'orange': return f'<span class="qal-highlight">{match_text}</span>'
         if group_name == 'red': return f'<span class="rasul-highlight">{match_text}</span>'
         if group_name == 'curly': return f'<span class="curly-highlight">{match_text}</span>'
-        
         return match_text
 
     formatted = MASTER_PATTERN.sub(formatter_func, text_to_process)
@@ -243,16 +208,11 @@ def apply_original_formatting(original_text):
 @st.cache_data(show_spinner=False)
 def get_dataset():
     books_config = [
-        ("bukhari", "Sahih Bukhari"),
-        ("muslim", "Sahih Muslim"),
-        ("abudawud", "Sunan Abu Dawood"),
-        ("tirmidhi", "Jami' At-Tirmidhi"),
-        ("nasai", "Sunan An-Nasa'i"),
-        ("ibnmajah", "Sunan Ibn Majah")
+        ("bukhari", "Sahih Bukhari"), ("muslim", "Sahih Muslim"),
+        ("abudawud", "Sunan Abu Dawood"), ("tirmidhi", "Jami' At-Tirmidhi"),
+        ("nasai", "Sunan An-Nasa'i"), ("ibnmajah", "Sunan Ibn Majah")
     ]
-    
     dataframes = []
-
     def load_book(api_slug, display_name):
         url = f"https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-{api_slug}.json"
         try:
@@ -262,39 +222,30 @@ def get_dataset():
                 df_book['book_name'] = display_name
                 df_book['search_text'] = df_book['text'].apply(clean_for_search)
                 return df_book
-        except Exception:
-            pass 
+        except Exception: pass 
         return pd.DataFrame()
     
     for slug, name in books_config:
         dataframes.append(load_book(slug, name))
     
     full_df = pd.concat(dataframes, ignore_index=True)
-    
     if not full_df.empty:
         full_df['hadithnumber'] = full_df['hadithnumber'].astype(str).str.replace('.0', '', regex=False)
-    
     return full_df
 
 with st.spinner("Laddar bibliotek (Al-Kutub Al-Sittah)..."):
     df = get_dataset()
 
 # --- ANVÄNDARGRÄNSSNITT ---
-
 query = st.text_input("Sök i Al-Kutub Al-Sittah (De sex böckerna):", placeholder='مثال: انما الاعمال')
 
-# --- SÖK OCH VISA RESULTAT ---
 if query:
     query = query.strip()
-    
-    # 0. NOLLSTÄLL FILTER OM NY SÖKNING
     if query != st.session_state.last_query:
         st.session_state.active_book_filter = None
         st.session_state.last_query = query
 
-    # --- LOGIK FÖR SÖKTYP ---
     if query.startswith('"') and query.endswith('"'):
-        # 1. EXAKT FRAS-SÖKNING
         raw_phrase = query[1:-1]
         if raw_phrase.strip():
             cleaned_phrase = clean_for_search(raw_phrase)
@@ -306,7 +257,6 @@ if query:
             search_words = []
             st.warning("Du angav tomma citattecken.")
     else:
-        # 2. VANLIG SÖKNING
         cleaned_query = clean_for_search(query)
         search_words = cleaned_query.split()
         if search_words:
@@ -316,43 +266,40 @@ if query:
         else:
             mask = pd.Series([False] * len(df))
 
-    # Hämta resultat (ALLA resultat, innan visnings-filter)
     all_results = df[mask]
 
     if not all_results.empty:
         total_hits = len(all_results)
         book_counts = all_results['book_name'].value_counts()
         
-        # --- NY LOGIK: KLICKBARA FILTER ---
-        st.markdown(f'<div style="margin-bottom: 5px; direction: ltr;"><strong>Hittade {total_hits} träffar. Filtrera på bok:</strong></div>', unsafe_allow_html=True)
+        # --- KOMPAKTA FILTER-KNAPPAR ---
+        st.markdown(f'<div style="margin-bottom: 5px; direction: ltr; font-size:14px;"><strong>Hittade {total_hits} träffar. Filtrera:</strong></div>', unsafe_allow_html=True)
         
-        # Skapa kolumner för knapparna (begränsa till antalet böcker med träffar)
-        cols = st.columns(len(book_counts))
+        # Skapa EXAKT TVÅ kolumner med litet gap
+        cols = st.columns(2, gap="small")
         
-        # Iterera genom böckerna och skapa en knapp för varje
+        # Loopa igenom böcker och placera dem varannan gång i vänster/höger kolumn
         for idx, (book_name, count) in enumerate(book_counts.items()):
-            # Om filtret är aktivt för denna bok, gör knappen "Primary" (färgad), annars "Secondary"
             is_active = (st.session_state.active_book_filter == book_name)
             btn_type = "primary" if is_active else "secondary"
             label = f"{book_name} ({count})"
             
-            # Skapa knappen i rätt kolumn
-            if cols[idx].button(label, key=f"btn_{book_name}", type=btn_type):
-                # LOGIK VID KLICK:
-                if is_active:
-                    st.session_state.active_book_filter = None # Avaktivera om man klickar igen
-                else:
-                    st.session_state.active_book_filter = book_name # Aktivera filter
-                st.rerun() # Ladda om sidan för att applicera filtret
+            # idx % 2 ger 0 för första, 1 för andra, 0 för tredje... (Växelvis placering)
+            with cols[idx % 2]:
+                if st.button(label, key=f"btn_{book_name}", type=btn_type):
+                    if is_active:
+                        st.session_state.active_book_filter = None
+                    else:
+                        st.session_state.active_book_filter = book_name
+                    st.rerun()
 
-        st.markdown("---") # Avdelare
+        st.markdown("---") 
 
-        # --- APPLICERA FILTRET PÅ RESULTATEN SOM SKA VISAS ---
+        # --- VISA RESULTAT ---
         results_to_display = all_results
         if st.session_state.active_book_filter:
             results_to_display = all_results[all_results['book_name'] == st.session_state.active_book_filter]
         
-        # --- VISA KORTEN ---
         for _, row in results_to_display.iterrows():
             formatted_text = apply_original_formatting(row['text'])
             formatted_text_highlighted = highlight_search_terms(formatted_text, search_words)
