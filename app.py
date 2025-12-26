@@ -7,7 +7,14 @@ import re
 # --- KONFIGURATION ---
 st.set_page_config(page_title="Hadith Viewer & Sök", page_icon="☪️", layout="centered")
 
-# --- REGLER FÖR TEXTHANTERING (OPTIMERAD: Definieras globalt) ---
+# --- INITIALISERA SESSION STATE (NYTT) ---
+# Vi behöver minnas filtret och senaste sökningen mellan knapptryckningar
+if 'active_book_filter' not in st.session_state:
+    st.session_state.active_book_filter = None
+if 'last_query' not in st.session_state:
+    st.session_state.last_query = ""
+
+# --- REGLER FÖR TEXTHANTERING ---
 # 1. Regex-byggstenar
 TASHKEEL = r'[\u064B-\u065F]*'
 SPACES = r'\s*'
@@ -27,10 +34,10 @@ ORANGE_WORDS = f'ف{TASHKEEL}ق{TASHKEEL}ا{TASHKEEL}ل{TASHKEEL} |ف{TASHKEEL}�
 PINK_WORDS = f'ح{TASHKEEL}د{TASHKEEL}ث{TASHKEEL}ن{TASHKEEL}ا|ح{TASHKEEL}د{TASHKEEL}ث{TASHKEEL}ن{TASHKEEL}ي|أ{TASHKEEL}خ{TASHKEEL}ب{TASHKEEL}ر{TASHKEEL}ن{TASHKEEL}ي|أ{TASHKEEL}خ{TASHKEEL}ب{TASHKEEL}ر{TASHKEEL}ن{TASHKEEL}ا|عَن{TASHKEEL} |س{TASHKEEL}م{TASHKEEL}ع{TASHKEEL}ت{TASHKEEL}ُ?'
 QUOTE_STR = r'".*?"|«.*?»|“.*?”'
 
-# NYTT: Mönster för måsvingar (hanterar allt inuti {})
+# Mönster för måsvingar
 CURLY_BRACES = r'\{.*?\}'
 
-# 4. Det stora huvudmönstret (Kompileras en gång för prestanda)
+# 4. Det stora huvudmönstret
 MASTER_PATTERN = re.compile(
     f'(?P<quote>{QUOTE_STR})|(?P<saw>{SALLALLAH})|(?P<ra_anhuma>{PATTERN_RA_ANHUMA})|'
     f'(?P<ra_anha>{PATTERN_RA_ANHA})|(?P<ra_anhu>{PATTERN_RA_ANHU})|'
@@ -69,6 +76,14 @@ st.markdown("""
     }
     [data-testid="InputInstructions"] {
         display: none !important;
+    }
+
+    /* Justering av standardknappar för filter */
+    div.stButton > button {
+        width: 100%;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
     }
 
     .hadith-card {
@@ -131,7 +146,7 @@ st.markdown("""
         background-color: #f1f8e9; color: #2e7d32; padding: 6px 14px;
         border-radius: 8px; font-size: 0.75rem; font-weight: 700;
         border: 1px solid #dcedc8;
-        white-space: nowrap; /* Förhindra radbrytning inuti taggen */
+        white-space: nowrap; 
     }
 
     .raw-code-box {
@@ -224,7 +239,7 @@ def apply_original_formatting(original_text):
     formatted = re.sub(r'\s+([\.،,])', r'\1', formatted)
     return formatted.strip()
 
-# --- DATALOGIK (HÄMTAR NU AL-KUTUB AL-SITTAH) ---
+# --- DATALOGIK ---
 @st.cache_data(show_spinner=False)
 def get_dataset():
     books_config = [
@@ -271,6 +286,11 @@ query = st.text_input("Sök i Al-Kutub Al-Sittah (De sex böckerna):", placehold
 # --- SÖK OCH VISA RESULTAT ---
 if query:
     query = query.strip()
+    
+    # 0. NOLLSTÄLL FILTER OM NY SÖKNING
+    if query != st.session_state.last_query:
+        st.session_state.active_book_filter = None
+        st.session_state.last_query = query
 
     # --- LOGIK FÖR SÖKTYP ---
     if query.startswith('"') and query.endswith('"'):
@@ -296,26 +316,44 @@ if query:
         else:
             mask = pd.Series([False] * len(df))
 
-    # Hämta resultat
-    results = df[mask]
+    # Hämta resultat (ALLA resultat, innan visnings-filter)
+    all_results = df[mask]
 
-    if not results.empty:
-        # --- NY LOGIK: BERÄKNA OCH VISA STATISTIK ---
-        total_hits = len(results)
-        book_counts = results['book_name'].value_counts()
+    if not all_results.empty:
+        total_hits = len(all_results)
+        book_counts = all_results['book_name'].value_counts()
         
-        # Skapa en HTML-sträng med taggar för varje bok som har träffar
-        stats_html = f'<div style="margin-bottom: 20px; direction: ltr;"><strong>Hittade {total_hits} träffar:</strong><br><div style="margin-top:8px;">'
+        # --- NY LOGIK: KLICKBARA FILTER ---
+        st.markdown(f'<div style="margin-bottom: 5px; direction: ltr;"><strong>Hittade {total_hits} träffar. Filtrera på bok:</strong></div>', unsafe_allow_html=True)
         
-        # Loopa igenom böckerna sorterat på antal träffar
-        for book, count in book_counts.items():
-            stats_html += f'<span class="meta-tag" style="margin-right: 8px; display: inline-block; margin-bottom: 8px;">{book}: {count}</span>'
+        # Skapa kolumner för knapparna (begränsa till antalet böcker med träffar)
+        cols = st.columns(len(book_counts))
         
-        stats_html += '</div></div>'
-        st.markdown(stats_html, unsafe_allow_html=True)
-        # --------------------------------------------
+        # Iterera genom böckerna och skapa en knapp för varje
+        for idx, (book_name, count) in enumerate(book_counts.items()):
+            # Om filtret är aktivt för denna bok, gör knappen "Primary" (färgad), annars "Secondary"
+            is_active = (st.session_state.active_book_filter == book_name)
+            btn_type = "primary" if is_active else "secondary"
+            label = f"{book_name} ({count})"
+            
+            # Skapa knappen i rätt kolumn
+            if cols[idx].button(label, key=f"btn_{book_name}", type=btn_type):
+                # LOGIK VID KLICK:
+                if is_active:
+                    st.session_state.active_book_filter = None # Avaktivera om man klickar igen
+                else:
+                    st.session_state.active_book_filter = book_name # Aktivera filter
+                st.rerun() # Ladda om sidan för att applicera filtret
 
-        for _, row in results.iterrows():
+        st.markdown("---") # Avdelare
+
+        # --- APPLICERA FILTRET PÅ RESULTATEN SOM SKA VISAS ---
+        results_to_display = all_results
+        if st.session_state.active_book_filter:
+            results_to_display = all_results[all_results['book_name'] == st.session_state.active_book_filter]
+        
+        # --- VISA KORTEN ---
+        for _, row in results_to_display.iterrows():
             formatted_text = apply_original_formatting(row['text'])
             formatted_text_highlighted = highlight_search_terms(formatted_text, search_words)
             
