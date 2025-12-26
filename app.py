@@ -72,8 +72,8 @@ st.markdown("""
     div.stButton > button {
         width: 100%;
         border-radius: 6px;
-        font-size: 13px;          /* Mindre text */
-        padding: 2px 8px;         /* Mindre luft inuti knappen */
+        font-size: 12px;          /* Mindre text */
+        padding: 2px 2px;         /* Mindre luft inuti knappen */
         min-height: 0px;          /* Ta bort standardhöjd */
         height: auto;             /* Låt texten styra höjden */
         line-height: 1.4;
