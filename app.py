@@ -85,7 +85,7 @@ st.markdown("""
     
     .arabic-text {
         font-family: 'Scheherazade New', serif;
-        font-size: 20px;
+        font-size: 18px;
         line-height: 1.6;
         direction: rtl;
         text-align: right;
@@ -111,7 +111,7 @@ st.markdown("""
     .saw-symbol { 
         color: #d32f2f; 
         font-family: 'Scheherazade New', serif; 
-        font-size: 1.1em;
+        font-size: 0.9em;
         margin-right: 4px; 
     }
 
@@ -119,7 +119,7 @@ st.markdown("""
         color: #000000; 
         font-family: 'Scheherazade New', serif; 
         font-weight: normal; 
-        font-size: 1.1em;
+        font-size: 0.9em;
         margin-right: 4px; 
     }
 
@@ -129,7 +129,7 @@ st.markdown("""
     }
     .meta-tag {
         background-color: #f1f8e9; color: #2e7d32; padding: 6px 14px;
-        border-radius: 8px; font-size: 0.6rem; font-weight: 700;
+        border-radius: 8px; font-size: 0.75rem; font-weight: 700;
         border: 1px solid #dcedc8;
         white-space: nowrap; /* Förhindra radbrytning inuti taggen */
     }
