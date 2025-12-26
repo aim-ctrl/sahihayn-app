@@ -68,24 +68,35 @@ st.markdown("""
     }
     [data-testid="InputInstructions"] { display: none !important; }
 
-    /* --- KOMPAKTA KNAPPAR (NYTT) --- */
+    /* --- KOMPAKTA KNAPPAR (JUSTERAD) --- */
+    
+    /* 1. Tvinga minskat avstånd (gap) mellan elementen inuti kolumnen */
+    [data-testid="column"] > div {
+        gap: 0.2rem !important; /* Här styr du avståndet mellan knapparna vertikalt */
+    }
+
     div.stButton > button {
         width: 100%;
         border-radius: 6px;
-        font-size: 8px;          /* Mindre text */
-        padding: 2px 4px;         /* Mindre luft inuti knappen */
-        min-height: 0px;          /* Ta bort standardhöjd */
-        height: auto;             /* Låt texten styra höjden */
+        font-size: 8px;          
+        padding: 2px 4px;        
+        min-height: 0px;          
+        height: auto;             
         line-height: 1;
         margin-top: 0px !important;
         margin-bottom: 0px !important;
     }
     
-    /* Minska avståndet mellan kolumnerna i filtret */
+    /* Justera containern runt knappen för säkerhets skull */
+    div.stButton {
+        margin-bottom: 0px; 
+    }
+    
     [data-testid="column"] {
         padding: 0px 0px;
     }
 
+    /* --- HADITH KORT DESIGN --- */
     .hadith-card {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
@@ -273,7 +284,7 @@ if query:
         book_counts = all_results['book_name'].value_counts()
         
         # --- KOMPAKTA FILTER-KNAPPAR ---
-        st.markdown(f'<div style="margin-bottom: 1px; direction: ltr; font-size: 11px;"><strong>Hittade {total_hits} träffar. Filtrera:</strong></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="margin-bottom: 5px; direction: ltr; font-size: 11px;"><strong>Hittade {total_hits} träffar. Filtrera:</strong></div>', unsafe_allow_html=True)
         
         # Skapa EXAKT TVÅ kolumner med litet gap
         cols = st.columns(2, gap="small")
