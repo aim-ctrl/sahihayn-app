@@ -83,7 +83,7 @@ st.markdown("""
     
     /* Minska avståndet mellan kolumnerna i filtret */
     [data-testid="column"] {
-        padding: 0px 4px;
+        padding: 0px 2px;
     }
 
     .hadith-card {
