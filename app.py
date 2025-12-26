@@ -105,7 +105,7 @@ st.markdown("""
         direction: rtl;
         text-align: right;
         color: #1a1a1a;
-        margin-top: 15px;
+        margin-top: 0px;
         width: 100%;
     }
     
