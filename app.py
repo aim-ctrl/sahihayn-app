@@ -76,7 +76,7 @@ st.markdown("""
         padding: 2px 4px;         /* Mindre luft inuti knappen */
         min-height: 0px;          /* Ta bort standardhöjd */
         height: auto;             /* Låt texten styra höjden */
-        line-height: 1.4;
+        line-height: 1;
         margin-top: 0px !important;
         margin-bottom: 0px !important;
     }
