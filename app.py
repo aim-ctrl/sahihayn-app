@@ -273,7 +273,7 @@ if query:
         book_counts = all_results['book_name'].value_counts()
         
         # --- KOMPAKTA FILTER-KNAPPAR ---
-        st.markdown(f'<div style="margin-bottom: 1px; direction: ltr; font-size: 2px;"><strong>Hittade {total_hits} träffar. Filtrera:</strong></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="margin-bottom: 1px; direction: ltr; font-size: 12px;"><strong>Hittade {total_hits} träffar. Filtrera:</strong></div>', unsafe_allow_html=True)
         
         # Skapa EXAKT TVÅ kolumner med litet gap
         cols = st.columns(2, gap="small")
