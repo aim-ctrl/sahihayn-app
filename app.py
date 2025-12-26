@@ -129,7 +129,7 @@ st.markdown("""
     }
     .meta-tag {
         background-color: #f1f8e9; color: #2e7d32; padding: 6px 14px;
-        border-radius: 8px; font-size: 0.9rem; font-weight: 700;
+        border-radius: 8px; font-size: 0.6rem; font-weight: 700;
         border: 1px solid #dcedc8;
         white-space: nowrap; /* Förhindra radbrytning inuti taggen */
     }
