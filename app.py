@@ -144,7 +144,7 @@ st.markdown("""
         white-space: pre-wrap; 
         direction: rtl;
         text-align: right;
-        font-size: 18px;
+        font-size: 14px;
         margin-top: 10px;
     }
     
