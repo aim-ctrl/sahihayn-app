@@ -23,11 +23,23 @@ BOOKS = [
     ("nasai", "Sunan An-Nasa'i"),
     ("ibnmajah", "Sunan Ibn Majah"),
 ]
+BOOK_NAMES = [name for _, name in BOOKS]
+SAHIHAYN = ["Sahih Bukhari", "Sahih Muslim"]
+
+SEARCH_MODES = {"Alla ord": "all", "Något av orden": "any", "Exakt fras": "phrase"}
+GRADE_LABELS = {
+    "sahih": "Sahih",
+    "hasan": "Hasan",
+    "daif": "Da'if",
+    "other": "Övrig",
+    "none": "Ingen gradering",
+}
 
 for _key, _default in {
-    "active_book_filter": None,
-    "last_query": "",
+    "book_filter": [],
+    "grade_filter": [],
     "visible_count": PAGE_SIZE,
+    "last_signature": None,
 }.items():
     st.session_state.setdefault(_key, _default)
 
@@ -100,6 +112,59 @@ MARKS_RE = re.compile(r"[\u064B-\u065F\u0670\u0640]")  # tashkeel + tatweel
 ALIF_RE = re.compile(f"[{ALIF_CHARS}]")
 TAG_SPLIT_RE = re.compile(r"(<[^>]+>|&#?\w+;)")
 
+# ---------------------------------------------------------------------------
+# GRADERING
+# ---------------------------------------------------------------------------
+DAIF_LATIN = ("daif", "daeef", "dhaif", "dhaeef", "weak", "munkar", "shadh", "mawdu", "maudu", "fabricat")
+DAIF_ARABIC = ("ضعيف", "موضوع", "منكر", "شاذ")
+
+
+def clean_for_search(text) -> str:
+    """Normaliserar arabisk text: tar bort tashkeel/tatweel, enhetlig alif/ya, enkla mellanslag."""
+    if not isinstance(text, str):
+        return ""
+    text = MARKS_RE.sub("", text)
+    text = ALIF_RE.sub("ا", text).replace("ى", "ي")
+    return " ".join(text.split())
+
+
+def classify_grade(grade) -> set:
+    """Mappar en graderingstext (engelska eller arabiska) till en eller flera kategorier."""
+    latin = re.sub(r"[^a-z]", "", str(grade).lower())
+    arabic = clean_for_search(str(grade))
+    found = set()
+    if "sahih" in latin or "saheeh" in latin or "صحيح" in arabic:
+        found.add("sahih")
+    if "hasan" in latin or "حسن" in arabic:
+        found.add("hasan")
+    if any(k in latin for k in DAIF_LATIN) or any(k in arabic for k in DAIF_ARABIC):
+        found.add("daif")
+    return found or {"other"}
+
+
+def primary_bucket(grade) -> str:
+    found = classify_grade(grade)
+    for key in ("daif", "hasan", "sahih"):
+        if key in found:
+            return key
+    return "other"
+
+
+def parse_grades(raw) -> list:
+    """Returnerar [(lärd, gradering), ...] oavsett om datan är lista av dicts eller strängar."""
+    out = []
+    if not isinstance(raw, list):
+        return out
+    for item in raw:
+        if isinstance(item, dict):
+            grade = str(item.get("grade") or "").strip()
+            grader = str(item.get("name") or item.get("graded_by") or item.get("grader") or "").strip()
+        else:
+            grade, grader = str(item or "").strip(), ""
+        if grade:
+            out.append((grader, grade))
+    return out
+
 
 # ---------------------------------------------------------------------------
 # CSS / DESIGN
@@ -155,6 +220,15 @@ st.markdown(
         border-radius: 8px; font-size: 0.75rem; font-weight: 700;
         border: 1px solid #dcedc8; white-space: nowrap;
     }
+
+    /* --- Graderingar --- */
+    .grade-row { display: flex; flex-wrap: wrap; gap: 6px; direction: ltr; margin-bottom: 12px; }
+    .grade-tag { font-size: 0.7rem; font-weight: 600; padding: 3px 8px; border-radius: 6px; border: 1px solid; }
+    .grade-sahih { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+    .grade-hasan { background: #e3f2fd; color: #1565c0; border-color: #bbdefb; }
+    .grade-daif  { background: #ffebee; color: #c62828; border-color: #ffcdd2; }
+    .grade-other { background: #f5f5f5; color: #616161; border-color: #e0e0e0; }
+
     .arabic-text {
         font-family: 'Scheherazade New', serif;
         font-size: 18px;
@@ -198,15 +272,6 @@ def escape_html(text) -> str:
     return html.escape(str(text), quote=False).replace("$", "&#36;")
 
 
-def clean_for_search(text) -> str:
-    """Normaliserar arabisk text: tar bort tashkeel/tatweel, enhetlig alif/ya, enkla mellanslag."""
-    if not isinstance(text, str):
-        return ""
-    text = MARKS_RE.sub("", text)
-    text = ALIF_RE.sub("ا", text).replace("ى", "ي")
-    return " ".join(text.split())
-
-
 def compile_highlighter(terms):
     words = sorted({t for t in terms if t}, key=len, reverse=True)  # längst först
     if not words:
@@ -246,7 +311,15 @@ def apply_original_formatting(original_text) -> str:
     return formatted.strip()
 
 
-def render_card(book: str, number: str, text: str, highlighter) -> str:
+def grade_chips(grades) -> str:
+    chips = []
+    for grader, grade in grades:
+        label = f"{grader}: {grade}" if grader else grade
+        chips.append(f'<span class="grade-tag grade-{primary_bucket(grade)}">{escape_html(label)}</span>')
+    return f'<div class="grade-row">{"".join(chips)}</div>' if chips else ""
+
+
+def render_card(book: str, number: str, text: str, grades, highlighter) -> str:
     body = highlight_search_terms(apply_original_formatting(text), highlighter)
     raw = "<br>".join(escape_html(line) for line in str(text).splitlines() if line.strip())
     # Allt på en rad: inga tomrader som kan bryta Markdowns HTML-block
@@ -256,6 +329,7 @@ def render_card(book: str, number: str, text: str, highlighter) -> str:
         f'<span class="meta-tag">📖 {escape_html(book)}</span>'
         f'<span class="meta-tag"># {escape_html(number)}</span>'
         "</div>"
+        f"{grade_chips(grades)}"
         f'<div class="arabic-text" lang="ar" dir="rtl">{body}</div>'
         "<details><summary>Original text</summary>"
         f'<div class="raw-code-box">{raw}</div>'
@@ -276,7 +350,10 @@ def _fetch_book(slug: str, name: str) -> pd.DataFrame:
         hadiths = resp.json().get("hadiths") or []
         if not hadiths:
             raise ValueError("tomt svar")
-        df_book = pd.DataFrame(hadiths)[["hadithnumber", "text"]]
+        df_book = pd.DataFrame(hadiths)
+        if "grades" not in df_book:
+            df_book["grades"] = None
+        df_book = df_book[["hadithnumber", "text", "grades"]].copy()
     except Exception as exc:
         raise RuntimeError(f"{name}: {exc}") from exc
     df_book["book_name"] = name
@@ -292,40 +369,76 @@ def get_dataset() -> pd.DataFrame:
     full_df = pd.concat(frames, ignore_index=True)
     full_df["hadithnumber"] = full_df["hadithnumber"].astype(str).str.replace(r"\.0$", "", regex=True)
     full_df["search_text"] = full_df["text"].map(clean_for_search)
-    return full_df
+
+    # Gradering: lista för visning + en bool-kolumn per kategori för snabb filtrering
+    parsed = full_df["grades"].map(parse_grades)
+    buckets = parsed.map(lambda gl: set().union(*(classify_grade(g) for _, g in gl)))
+    for key in ("sahih", "hasan", "daif", "other"):
+        full_df[f"g_{key}"] = buckets.map(lambda s, k=key: k in s)
+    full_df["g_none"] = parsed.map(len).eq(0)
+    full_df["grade_list"] = parsed
+    return full_df.drop(columns="grades")
 
 
 QUOTE_PAIRS = (('"', '"'), ("«", "»"), ("“", "”"))
 
 
-def parse_query(raw: str):
-    """Returnerar (söktermer, är_fras). En fras i citattecken blir en enda term."""
+def parse_query(raw: str, mode: str):
+    """Returnerar (söktermer, läge). Text inom citattecken tvingar alltid exakt fras."""
     q = raw.strip()
     for opening, closing in QUOTE_PAIRS:
         if len(q) >= 2 and q.startswith(opening) and q.endswith(closing):
-            phrase = clean_for_search(q[1:-1])
-            return ((phrase,) if phrase else ()), True
-    return tuple(clean_for_search(q).split()), False
+            q, mode = q[1:-1], "phrase"
+            break
+    cleaned = clean_for_search(q)
+    if not cleaned:
+        return (), mode
+    terms = (cleaned,) if mode == "phrase" else tuple(dict.fromkeys(cleaned.split()))
+    return terms, mode
 
 
 @st.cache_data(show_spinner=False, max_entries=64)
-def search_indices(terms: tuple) -> list:
+def search_indices(terms: tuple, mode: str) -> list:
     data = get_dataset()
-    mask = pd.Series(True, index=data.index)
-    for term in terms:
-        mask &= data["search_text"].str.contains(term, regex=False, na=False)
+    hits = [data["search_text"].str.contains(t, regex=False, na=False) for t in terms]
+    if mode == "any":  # minst ett ord, flest matchande ord först
+        score = sum(h.astype(int) for h in hits)
+        return score[score > 0].sort_values(ascending=False, kind="stable").index.tolist()
+    mask = hits[0]
+    for h in hits[1:]:
+        mask = mask & h
     return data.index[mask].tolist()
 
 
+def filter_by_books(frame: pd.DataFrame, books) -> pd.DataFrame:
+    return frame[frame["book_name"].isin(books)] if books else frame
+
+
+def filter_by_grades(frame: pd.DataFrame, grades) -> pd.DataFrame:
+    if not grades:
+        return frame
+    mask = pd.Series(False, index=frame.index)
+    for key in grades:
+        mask |= frame[f"g_{key}"]
+    return frame[mask]
+
+
 # --- Callbacks ---
-def toggle_book_filter(book_name: str):
-    current = st.session_state.active_book_filter
-    st.session_state.active_book_filter = None if current == book_name else book_name
-    st.session_state.visible_count = PAGE_SIZE
+def set_book_filter(books):
+    st.session_state.book_filter = list(books)
+
+
+def clear_filters():
+    st.session_state.book_filter = []
+    st.session_state.grade_filter = []
 
 
 def show_more():
     st.session_state.visible_count += PAGE_SIZE
+
+
+def fmt(n: int) -> str:
+    return f"{n:,}".replace(",", " ")
 
 
 # ---------------------------------------------------------------------------
@@ -338,62 +451,96 @@ except Exception as exc:
     st.error(f"Kunde inte ladda hadith-databasen. Försök igen om en stund.\n\n`{exc}`")
     st.stop()
 
+HAS_GRADES = bool((~df["g_none"]).any())  # göm graderingsfiltret om datan saknar gradering
+
 query = st.text_input(
     "Sök i Al-Kutub Al-Sittah (De sex böckerna):",
     placeholder="مثال: انما الاعمال",
-    help='Skriv flera ord för att hitta hadither som innehåller alla. '
-    'Sätt citattecken runt för en exakt fras, t.ex. "انما الاعمال بالنيات".',
+    help='Citattecken runt sökningen (t.ex. "انما الاعمال بالنيات") ger alltid exakt fras.',
 ).strip()
+mode_label = st.radio(
+    "Sökläge", list(SEARCH_MODES), horizontal=True, label_visibility="collapsed", key="search_mode"
+)
 
 if not query:
     st.info("Vänligen skriv in sökord ovan för att söka i Al-Kutub Al-Sittah.")
     st.stop()
 
-if query != st.session_state.last_query:
-    st.session_state.last_query = query
-    st.session_state.active_book_filter = None
-    st.session_state.visible_count = PAGE_SIZE
-
-terms, is_phrase = parse_query(query)
+terms, mode = parse_query(query, SEARCH_MODES[mode_label])
 if not terms:
-    st.warning("Du angav tomma citattecken." if is_phrase else "Sökningen innehåller inga sökbara tecken.")
+    st.warning("Sökningen innehåller inga sökbara tecken.")
     st.stop()
 
-indices = search_indices(terms)
+indices = search_indices(terms, mode)
 if not indices:
     st.info("Inga hadither hittades som matchar din sökning.")
     st.stop()
 
-all_results = df.loc[indices]
-book_counts = all_results["book_name"].value_counts()
+text_hits = df.loc[indices]  # behåller rangordningen från sökningen
 
-# --- Filterknappar (två kolumner) ---
+# --- Aktiva filter (värdena ligger redan i session_state från föregående körning) ---
+books_sel = st.session_state.book_filter
+grades_sel = st.session_state.grade_filter if HAS_GRADES else []
+results = filter_by_grades(filter_by_books(text_hits, books_sel), grades_sel)
+
+signature = (query, mode, tuple(books_sel), tuple(grades_sel))
+if signature != st.session_state.last_signature:
+    st.session_state.last_signature = signature
+    st.session_state.visible_count = PAGE_SIZE
+
+# --- Rubrik + filter ---
+total, shown = len(text_hits), len(results)
+headline = (
+    f"Hittade {fmt(total)} träffar"
+    if shown == total
+    else f"Visar {fmt(shown)} av {fmt(total)} träffar (filter aktivt)"
+)
 st.markdown(
-    f'<div style="margin-bottom:5px; direction:ltr; font-size:11px;">'
-    f"<strong>Hittade {len(all_results):,} träffar. Filtrera:</strong></div>".replace(",", " "),
+    f'<div style="margin: 4px 0; direction: ltr; font-size: 12px;"><strong>{headline}</strong></div>',
     unsafe_allow_html=True,
 )
-cols = st.columns(2, gap="small")
-for idx, (book_name, count) in enumerate(book_counts.items()):
-    is_active = st.session_state.active_book_filter == book_name
-    with cols[idx % 2]:
-        st.button(
-            f"{book_name} ({count})",
-            key=f"btn_{book_name}",
-            type="primary" if is_active else "secondary",
-            on_click=toggle_book_filter,
-            args=(book_name,),
+if mode == "any" and len(terms) > 1:
+    st.caption("Sorterat efter antal matchande ord.")
+
+# Facetterade antal: bokantalet räknas med gradering applicerad, och tvärtom
+book_counts = filter_by_grades(text_hits, grades_sel)["book_name"].value_counts()
+grade_counts = {k: int(filter_by_books(text_hits, books_sel)[f"g_{k}"].sum()) for k in GRADE_LABELS}
+
+with st.expander("Filter"):
+    st.multiselect(
+        "Böcker",
+        options=BOOK_NAMES,
+        key="book_filter",
+        format_func=lambda name: f"{name} ({fmt(int(book_counts.get(name, 0)))})",
+        placeholder="Alla böcker",
+    )
+    if HAS_GRADES:
+        st.multiselect(
+            "Gradering",
+            options=list(GRADE_LABELS),
+            key="grade_filter",
+            format_func=lambda key: f"{GRADE_LABELS[key]} ({fmt(grade_counts[key])})",
+            placeholder="Alla graderingar",
+            help="Träffar där någon av lärdarna gett vald gradering. "
+            "Bukhari och Muslim saknar gradering i datan – välj 'Ingen gradering' för att ta med dem.",
         )
+    col_a, col_b = st.columns(2, gap="small")
+    with col_a:
+        st.button("Bara Sahihayn", key="preset_sahihayn", on_click=set_book_filter, args=(SAHIHAYN,))
+    with col_b:
+        st.button("Rensa filter", key="clear_filters", on_click=clear_filters)
+
+if results.empty:
+    st.info("Inga träffar med valda filter. Ändra eller rensa filtret ovan.")
+    st.stop()
 
 # --- Resultat ---
-active_filter = st.session_state.active_book_filter
-results = all_results[all_results["book_name"] == active_filter] if active_filter else all_results
 visible = st.session_state.visible_count
 highlighter = compile_highlighter(terms)
 
 for row in results.iloc[:visible].itertuples():
     st.markdown(
-        render_card(row.book_name, row.hadithnumber, row.text, highlighter),
+        render_card(row.book_name, row.hadithnumber, row.text, row.grade_list, highlighter),
         unsafe_allow_html=True,
     )
 
